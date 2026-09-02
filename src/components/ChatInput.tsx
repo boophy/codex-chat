@@ -5,22 +5,20 @@ import {
   Compass,
   Square,
   CornerDownLeft,
-  Paperclip,
-  Wrench,
   Wand2,
   Navigation2
 } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { Textarea } from "@/src/components/ui/textarea";
 import { Badge } from "@/src/components/ui/badge";
-import { SkillInfo, AppInfo } from "@/src/types/protocol";
+import { SkillMetadata, AppInfo } from "@/src/types/protocol";
 
 interface ChatInputProps {
   onSendMessage: (text: string, skills: string[], mentions: string[]) => void;
   onSteerTurn: (text: string) => void;
   onInterrupt: () => void;
   isTurnInProgress: boolean;
-  skills: SkillInfo[];
+  skills: SkillMetadata[];
   apps: AppInfo[];
   disabled?: boolean;
 }
@@ -118,119 +116,155 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
           <div className="max-h-48 overflow-y-auto space-y-1">
             {mentionType === "skill" ? (
-              skills.map((s) => (
-                <button
-                  key={s.name}
-                  type="button"
-                  onClick={() => addSkill(s.name)}
-                  className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-zinc-800 flex flex-col transition-colors cursor-pointer text-xs"
-                >
-                  <span className="font-semibold text-purple-300">${s.name}</span>
-                  <span className="text-[10px] text-zinc-400 line-clamp-1">{s.description}</span>
-                </button>
-              ))
+              skills.length === 0 ? (
+                <div className="text-[11px] text-zinc-500 p-2">No skills discovered</div>
+              ) : (
+                skills.map((s) => (
+                  <button
+                    key={s.name}
+                    type="button"
+                    onClick={() => addSkill(s.name)}
+                    className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-zinc-800 flex items-center justify-between text-xs text-purple-300 font-mono transition-colors"
+                  >
+                    <span>${s.name}</span>
+                    <span className="text-[10px] text-zinc-500 font-sans">skill</span>
+                  </button>
+                ))
+              )
             ) : (
-              apps.map((a) => (
-                <button
-                  key={a.id}
-                  type="button"
-                  onClick={() => addApp(a.id)}
-                  className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-zinc-800 flex flex-col transition-colors cursor-pointer text-xs"
-                >
-                  <span className="font-semibold text-cyan-300">@{a.id}</span>
-                  <span className="text-[10px] text-zinc-400 line-clamp-1">{a.name} - {a.description}</span>
-                </button>
-              ))
+              apps.length === 0 ? (
+                <div className="text-[11px] text-zinc-500 p-2">No apps discovered</div>
+              ) : (
+                apps.map((a) => (
+                  <button
+                    key={a.id}
+                    type="button"
+                    onClick={() => addApp(a.id)}
+                    className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-zinc-800 flex items-center justify-between text-xs text-cyan-300 font-mono transition-colors"
+                  >
+                    <span>@{a.id}</span>
+                    <span className="text-[10px] text-zinc-500 font-sans">{a.name}</span>
+                  </button>
+                ))
+              )
             )}
           </div>
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-1.5 mb-2">
-        <span className="text-[11px] text-zinc-500 mr-1 flex items-center gap-1">
-          <Sparkles className="w-3 h-3 text-zinc-400" />
-          Quick Insert:
-        </span>
-        {skills.slice(0, 3).map((s) => (
-          <button
-            key={s.name}
-            type="button"
-            onClick={() => addSkill(s.name)}
-            className="px-2 py-0.5 rounded-md bg-purple-950/40 hover:bg-purple-900/50 border border-purple-800/50 text-purple-300 text-[11px] font-mono transition-colors cursor-pointer"
-          >
-            ${s.name}
-          </button>
-        ))}
-        {apps.slice(0, 2).map((a) => (
-          <button
-            key={a.id}
-            type="button"
-            onClick={() => addApp(a.id)}
-            className="px-2 py-0.5 rounded-md bg-cyan-950/40 hover:bg-cyan-900/50 border border-cyan-800/50 text-cyan-300 text-[11px] font-mono transition-colors cursor-pointer"
-          >
-            @{a.id}
-          </button>
-        ))}
-      </div>
-
-      <div className="relative rounded-xl border border-zinc-800 bg-zinc-900/80 shadow-lg focus-within:border-zinc-600 transition-colors">
-        <Textarea
-          ref={textareaRef}
-          value={text}
-          onChange={handleTextChange}
-          onKeyDown={handleKeyDown}
-          placeholder={
-            isTurnInProgress
-              ? "Steer active turn (type additional guidance)..."
-              : "Ask Codex to build features, inspect code, run tests, or invoke skills with $..."
-          }
-          className="min-h-[72px] max-h-[180px] p-3 text-sm bg-transparent border-0 focus-visible:ring-0 text-zinc-100 placeholder:text-zinc-500"
-          disabled={disabled}
-        />
-
-        <div className="flex items-center justify-between p-2 pt-0 border-t border-zinc-800/40 mt-1">
-          <div className="flex items-center gap-2 text-xs text-zinc-500 font-mono">
-            <span>JSON-RPC 2.0</span>
-            {isTurnInProgress && (
-              <Badge variant="purple" className="text-[10px] py-0 font-sans">
-                Steer Mode Active
-              </Badge>
-            )}
+      <div className="max-w-4xl mx-auto flex flex-col gap-2">
+        {(attachedSkills.length > 0 || attachedMentions.length > 0) && (
+          <div className="flex flex-wrap items-center gap-1.5 px-1">
+            {attachedSkills.map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setAttachedSkills(attachedSkills.filter((x) => x !== s))}
+                title="Click to remove"
+              >
+                <Badge
+                  variant="purple"
+                  className="gap-1 cursor-pointer hover:bg-purple-900/60 text-xs py-0.5"
+                >
+                  ${s}
+                  <span className="text-[10px] opacity-70">×</span>
+                </Badge>
+              </button>
+            ))}
+            {attachedMentions.map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setAttachedMentions(attachedMentions.filter((x) => x !== m))}
+                title="Click to remove"
+              >
+                <Badge
+                  variant="info"
+                  className="gap-1 cursor-pointer hover:bg-blue-900/60 text-xs py-0.5"
+                >
+                  @{m}
+                  <span className="text-[10px] opacity-70">×</span>
+                </Badge>
+              </button>
+            ))}
           </div>
+        )}
 
-          <div className="flex items-center gap-2">
-            {isTurnInProgress && (
+        <div className="relative flex items-end rounded-2xl border border-zinc-800 bg-zinc-900/90 shadow-lg focus-within:border-zinc-600 focus-within:ring-1 focus-within:ring-zinc-600 transition-all">
+          <Textarea
+            ref={textareaRef}
+            value={text}
+            onChange={handleTextChange}
+            onKeyDown={handleKeyDown}
+            placeholder={
+              isTurnInProgress
+                ? "Agent is working... Type to steer or provide guidance..."
+                : "Ask Codex, run shell tasks, or type $ for skills and @ for apps..."
+            }
+            disabled={disabled}
+            rows={1}
+            className="flex-1 bg-transparent border-0 focus-visible:ring-0 resize-none min-h-[44px] max-h-32 py-3 px-4 text-sm text-zinc-100 placeholder:text-zinc-500"
+          />
+
+          <div className="flex items-center gap-1.5 p-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                setMentionType("skill");
+                setShowMentionMenu(!showMentionMenu);
+              }}
+              className="p-1.5 text-zinc-400 hover:text-purple-400 rounded-lg hover:bg-zinc-800 transition-colors text-xs font-mono font-semibold"
+              title="Insert Skill ($)"
+            >
+              $
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMentionType("app");
+                setShowMentionMenu(!showMentionMenu);
+              }}
+              className="p-1.5 text-zinc-400 hover:text-cyan-400 rounded-lg hover:bg-zinc-800 transition-colors text-xs font-mono font-semibold"
+              title="Insert App (@)"
+            >
+              @
+            </button>
+
+            {isTurnInProgress ? (
               <Button
                 size="sm"
-                variant="destructive"
-                onClick={onInterrupt}
-                className="h-8 px-3 text-xs gap-1.5"
+                variant="default"
+                onClick={handleSubmit}
+                disabled={!text.trim()}
+                className="h-8 gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-medium"
               >
-                <Square className="w-3.5 h-3.5 fill-current" />
-                <span>Stop</span>
+                <Navigation2 className="w-3.5 h-3.5" />
+                <span>Steer</span>
+              </Button>
+            ) : (
+              <Button
+                size="xsIcon"
+                variant="accent"
+                onClick={handleSubmit}
+                disabled={!text.trim() || disabled}
+                className="w-8 h-8 rounded-xl shadow-xs"
+              >
+                <Send className="w-4 h-4" />
               </Button>
             )}
-
-            <Button
-              size="sm"
-              variant={isTurnInProgress ? "secondary" : "default"}
-              onClick={handleSubmit}
-              disabled={!text.trim() || disabled}
-              className="h-8 px-3.5 text-xs font-semibold gap-1.5 bg-zinc-100 text-zinc-900 hover:bg-zinc-200"
-            >
-              {isTurnInProgress ? (
-                <>
-                  <Navigation2 className="w-3.5 h-3.5" />
-                  <span>Steer</span>
-                </>
-              ) : (
-                <>
-                  <span>Send</span>
-                  <CornerDownLeft className="w-3.5 h-3.5 opacity-70" />
-                </>
-              )}
-            </Button>
           </div>
+        </div>
+
+        <div className="flex items-center justify-between px-2 text-[11px] text-zinc-500">
+          <div className="flex items-center gap-3">
+            <span>
+              <kbd className="px-1.5 py-0.5 text-[10px] bg-zinc-800 border border-zinc-700 rounded text-zinc-400 font-mono">Enter</kbd> to send
+            </span>
+            <span>
+              <kbd className="px-1.5 py-0.5 text-[10px] bg-zinc-800 border border-zinc-700 rounded text-zinc-400 font-mono">Shift + Enter</kbd> for newline
+            </span>
+          </div>
+          <span>Codex JSON-RPC Stream</span>
         </div>
       </div>
     </div>

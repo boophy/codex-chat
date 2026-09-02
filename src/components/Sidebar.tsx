@@ -4,20 +4,13 @@ import {
   MessageSquare,
   GitBranch,
   Trash2,
-  Archive,
-  Cpu,
-  Sparkles,
-  Layers,
-  Activity,
   Zap,
-  Server,
   RefreshCw,
-  FolderCode
+  Layers
 } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
-import { Badge } from "@/src/components/ui/badge";
 import { ScrollArea } from "@/src/components/ui/scroll-area";
-import { Thread, RateLimitsInfo } from "@/src/types/protocol";
+import { Thread, GetAccountRateLimitsResponse } from "@/src/types/protocol";
 import { ConnectionStatus } from "@/src/lib/websocket-client";
 import { cn } from "@/src/lib/utils";
 
@@ -25,7 +18,7 @@ interface SidebarProps {
   threads: Thread[];
   activeThreadId: string | null;
   connectionStatus: ConnectionStatus;
-  rateLimits: RateLimitsInfo | null;
+  rateLimits: GetAccountRateLimitsResponse | null;
   onSelectThread: (threadId: string) => void;
   onNewThread: () => void;
   onForkThread: (threadId: string) => void;
@@ -59,8 +52,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="font-bold text-sm text-zinc-100 tracking-tight">Codex App Server</div>
             <div className="flex items-center gap-1.5 text-[11px] text-zinc-400">
               <span
+                className={cn}
+              />
+              <span
                 className={cn(
-                  "w-2 h-2 rounded-full",
+                  "w-2 h-2 rounded-full inline-block",
                   connectionStatus === "connected" && "bg-emerald-500 animate-pulse",
                   connectionStatus === "connecting" && "bg-amber-500 animate-ping",
                   connectionStatus === "error" && "bg-red-500",
@@ -134,7 +130,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         )}
                       />
                       <span className="font-medium truncate text-zinc-200">
-                        {t.preview || "Untitled Thread"}
+                        {t.name || t.preview || "Untitled Thread"}
                       </span>
                     </div>
 
@@ -165,7 +161,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </div>
 
                   <div className="flex items-center justify-between text-[10px] text-zinc-500 font-mono">
-                    <span className="truncate">{t.model || "gpt-5.4-codex"}</span>
+                    <span className="truncate">{t.modelProvider || "openai"}</span>
                     <span>{formatTime(t.recencyAt || t.createdAt)}</span>
                   </div>
                 </div>
@@ -191,15 +187,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
               />
             </div>
             <div className="flex justify-between text-[10px] text-zinc-500 font-mono">
-              <span>Resets in 12m</span>
+              <span>{rateLimits.rateLimits.primary.windowDurationMins ? `${rateLimits.rateLimits.primary.windowDurationMins}m window` : "Active"}</span>
               <span>{rateLimits.rateLimitResetCredits?.availableCount || 0} Credits</span>
             </div>
           </div>
         )}
 
         <div className="flex items-center justify-between px-1 text-[11px] text-zinc-500">
-          <span>Codex v1.4.0</span>
-          <span>ws:// JSON-RPC</span>
+          <span>Codex Protocol v2</span>
+          <span>JSON-RPC 2.0</span>
         </div>
       </div>
     </aside>
@@ -208,9 +204,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
 function formatTime(ts: number) {
   if (!ts) return "";
-  const diff = Date.now() - ts;
+  const tsMs = ts < 1e11 ? ts * 1000 : ts;
+  const diff = Date.now() - tsMs;
   if (diff < 60000) return "just now";
   if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
   if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
-  return new Date(ts).toLocaleDateString();
+  return new Date(tsMs).toLocaleDateString();
 }

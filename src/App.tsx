@@ -12,36 +12,40 @@ import {
   Thread,
   Turn,
   ThreadItem,
-  ModelInfo,
-  SkillInfo,
+  Model,
+  SkillMetadata,
   AppInfo,
-  RateLimitsInfo,
-  DiagnosticSnapshot,
-  TokenUsage,
-  CommandApprovalRequest,
-  FileChangeApprovalRequest
+  GetAccountRateLimitsResponse,
+  ServerDiagnosticsResponse,
+  ThreadTokenUsage,
+  CommandExecutionRequestApprovalParams,
+  FileChangeRequestApprovalParams,
+  AskForApproval,
+  ReasoningEffort,
+  UserInput
 } from "@/src/types/protocol";
 import { ScrollArea } from "@/src/components/ui/scroll-area";
-import { Bot, Sparkles, Terminal, ShieldAlert } from "lucide-react";
+import { Bot, Sparkles, Terminal } from "lucide-react";
 
 export default function App() {
   const [connectionStatus, setConnectionStatus] = React.useState<ConnectionStatus>("disconnected");
   const [threads, setThreads] = React.useState<Thread[]>([]);
   const [activeThreadId, setActiveThreadId] = React.useState<string | null>(null);
   const [currentThread, setCurrentThread] = React.useState<Thread | null>(null);
-  const [models, setModels] = React.useState<ModelInfo[]>([]);
-  const [skills, setSkills] = React.useState<SkillInfo[]>([]);
+  const [models, setModels] = React.useState<Model[]>([]);
+  const [skills, setSkills] = React.useState<SkillMetadata[]>([]);
   const [apps, setApps] = React.useState<AppInfo[]>([]);
-  const [rateLimits, setRateLimits] = React.useState<RateLimitsInfo | null>(null);
-  const [diagnostics, setDiagnostics] = React.useState<DiagnosticSnapshot | null>(null);
+  const [rateLimits, setRateLimits] = React.useState<GetAccountRateLimitsResponse | null>(null);
+  const [diagnostics, setDiagnostics] = React.useState<ServerDiagnosticsResponse | null>(null);
   const [selectedModel, setSelectedModel] = React.useState("gpt-5.4-codex");
-  const [selectedEffort, setSelectedEffort] = React.useState("medium");
-  const [approvalPolicy, setApprovalPolicy] = React.useState("unlessTrusted");
-  const [tokenUsage, setTokenUsage] = React.useState<TokenUsage | null>(null);
+  const [selectedEffort, setSelectedEffort] = React.useState<ReasoningEffort>("medium");
+  const [approvalPolicy, setApprovalPolicy] = React.useState<AskForApproval>("on-request");
+  const [tokenUsage, setTokenUsage] = React.useState<ThreadTokenUsage | null>(null);
   const [isTurnInProgress, setIsTurnInProgress] = React.useState(false);
+  const [activeTurnId, setActiveTurnId] = React.useState<string | null>(null);
 
-  const [commandApproval, setCommandApproval] = React.useState<CommandApprovalRequest | null>(null);
-  const [fileApproval, setFileApproval] = React.useState<FileChangeApprovalRequest | null>(null);
+  const [commandApproval, setCommandApproval] = React.useState<CommandExecutionRequestApprovalParams | null>(null);
+  const [fileApproval, setFileApproval] = React.useState<FileChangeRequestApprovalParams | null>(null);
   const commandApprovalResolverRef = React.useRef<((res: any) => void) | null>(null);
   const fileApprovalResolverRef = React.useRef<((res: any) => void) | null>(null);
 
@@ -88,8 +92,14 @@ export default function App() {
         setModels(modelListRes.value.data);
       }
 
-      if (skillsListRes.status === "fulfilled" && skillsListRes.value?.data?.[0]?.skills) {
-        setSkills(skillsListRes.value.data[0].skills);
+      if (skillsListRes.status === "fulfilled" && skillsListRes.value?.data) {
+        const skillsArray: SkillMetadata[] = [];
+        skillsListRes.value.data.forEach((entry: any) => {
+          if (entry.skills) {
+            skillsArray.push(...entry.skills);
+          }
+        });
+        setSkills(skillsArray);
       }
 
       if (appsListRes.status === "fulfilled" && appsListRes.value?.data) {
@@ -147,6 +157,7 @@ export default function App() {
         });
         if (params.status.type === "idle" || params.status.type === "notLoaded") {
           setIsTurnInProgress(false);
+          setActiveTurnId(null);
         }
       }
     });
@@ -154,6 +165,7 @@ export default function App() {
     const unsubTurnStarted = wsClient.on("turn/started", (params) => {
       setIsTurnInProgress(true);
       if (params?.turn) {
+        setActiveTurnId(params.turn.id);
         setCurrentThread((curr) => {
           if (!curr) return curr;
           const turnExists = curr.turns?.some((t) => t.id === params.turn.id);
@@ -167,6 +179,7 @@ export default function App() {
 
     const unsubTurnCompleted = wsClient.on("turn/completed", (params) => {
       setIsTurnInProgress(false);
+      setActiveTurnId(null);
       setCommandApproval(null);
       setFileApproval(null);
       if (params?.turn) {
@@ -239,7 +252,8 @@ export default function App() {
         const lastTurn = curr.turns[curr.turns.length - 1];
         const newItems = lastTurn.items.map((i) => {
           if (i.id === params.itemId && i.type === "reasoning") {
-            return { ...i, summary: (i.summary || "") + params.delta };
+            const currentSummary = Array.isArray(i.summary) ? i.summary.join("") : (i.summary || "");
+            return { ...i, summary: [currentSummary + params.delta] };
           }
           return i;
         });
@@ -332,8 +346,10 @@ export default function App() {
       const res = await wsClient.request("thread/read", { threadId, includeTurns: true });
       if (res?.thread) {
         setCurrentThread(res.thread);
-        if (res.thread.model) setSelectedModel(res.thread.model);
-        if (res.thread.reasoningEffort) setSelectedEffort(res.thread.reasoningEffort);
+        if (res.thread.modelProvider) {
+          const matched = models.find((m) => m.modelProvider === res.thread.modelProvider);
+          if (matched) setSelectedModel(matched.model);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -344,8 +360,7 @@ export default function App() {
     try {
       const res = await wsClient.request("thread/start", {
         model: selectedModel,
-        effort: selectedEffort,
-        approvalPolicy: approvalPolicy
+        approvalPolicy
       });
       if (res?.thread) {
         setThreads((prev) => [res.thread, ...prev]);
@@ -411,7 +426,6 @@ export default function App() {
       try {
         const threadRes = await wsClient.request("thread/start", {
           model: selectedModel,
-          effort: selectedEffort,
           approvalPolicy
         });
         if (threadRes?.thread) {
@@ -430,7 +444,7 @@ export default function App() {
   };
 
   const executeTurn = async (threadId: string, text: string, attachedSkills: string[], attachedMentions: string[]) => {
-    const inputs: any[] = [{ type: "text", text }];
+    const inputs: UserInput[] = [{ type: "text", text, text_elements: [] }];
 
     attachedSkills.forEach((s) => {
       inputs.push({ type: "skill", name: s, path: `/skills/${s}/SKILL.md` });
@@ -442,13 +456,16 @@ export default function App() {
 
     try {
       setIsTurnInProgress(true);
-      await wsClient.request("turn/start", {
+      const res = await wsClient.request("turn/start", {
         threadId,
         input: inputs,
         model: selectedModel,
         effort: selectedEffort,
         approvalPolicy
       });
+      if (res?.turn) {
+        setActiveTurnId(res.turn.id);
+      }
     } catch (err) {
       console.error(err);
       setIsTurnInProgress(false);
@@ -460,7 +477,8 @@ export default function App() {
     try {
       await wsClient.request("turn/steer", {
         threadId: activeThreadId,
-        input: [{ type: "text", text }]
+        expectedTurnId: activeTurnId || "turn_active",
+        input: [{ type: "text", text, text_elements: [] }]
       });
     } catch (err) {
       console.error(err);
@@ -470,8 +488,12 @@ export default function App() {
   const handleInterrupt = async () => {
     if (!activeThreadId) return;
     try {
-      await wsClient.request("turn/interrupt", { threadId: activeThreadId });
+      await wsClient.request("turn/interrupt", {
+        threadId: activeThreadId,
+        turnId: activeTurnId || "turn_active"
+      });
       setIsTurnInProgress(false);
+      setActiveTurnId(null);
     } catch (err) {
       console.error(err);
     }
@@ -482,7 +504,6 @@ export default function App() {
       commandApprovalResolverRef.current(decision);
       commandApprovalResolverRef.current = null;
     }
-    setCommandApproval(null);
   };
 
   const handleDecideFile = (decision: "accept" | "acceptForSession" | "decline" | "cancel") => {
@@ -490,17 +511,15 @@ export default function App() {
       fileApprovalResolverRef.current(decision);
       fileApprovalResolverRef.current = null;
     }
-    setFileApproval(null);
   };
 
-  const handleSaveWsUrl = (newUrl: string) => {
-    wsClient.setUrl(newUrl);
-    wsClient.disconnect();
-    connectAndInitialize();
-  };
+  const allItems: ThreadItem[] = React.useMemo(() => {
+    if (!currentThread || !currentThread.turns) return [];
+    return currentThread.turns.flatMap((t) => t.items || []);
+  }, [currentThread]);
 
   return (
-    <div className="flex h-screen w-screen bg-zinc-950 text-zinc-100 overflow-hidden font-sans">
+    <div className="flex h-screen w-screen bg-zinc-950 text-zinc-100 overflow-hidden font-sans antialiased">
       <Sidebar
         threads={threads}
         activeThreadId={activeThreadId}
@@ -515,7 +534,7 @@ export default function App() {
         onReconnect={connectAndInitialize}
       />
 
-      <main className="flex-1 flex flex-col min-w-0 h-full relative">
+      <main className="flex-1 flex flex-col min-w-0 h-full relative bg-zinc-950">
         <ChatHeader
           currentThread={currentThread}
           models={models}
@@ -527,127 +546,88 @@ export default function App() {
           connectionStatus={connectionStatus}
           showInspector={showInspector}
           onSelectModel={setSelectedModel}
-          onSelectEffort={setSelectedEffort}
+          onSelectEffort={(eff) => setSelectedEffort(eff as ReasoningEffort)}
           onSelectApprovalPolicy={setApprovalPolicy}
           onInterrupt={handleInterrupt}
           onToggleInspector={() => setShowInspector(!showInspector)}
-          onOpenSettings={() => {
-            fetchDiagnostics();
-            setShowSettings(true);
-          }}
+          onOpenSettings={() => setShowSettings(true)}
           onReconnect={connectAndInitialize}
         />
 
-        <div className="flex-1 overflow-y-auto relative flex flex-col">
-          {(!currentThread || !currentThread.turns || currentThread.turns.length === 0) ? (
-            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center max-w-lg mx-auto">
-              <div className="w-14 h-14 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-emerald-400 mb-4 shadow-xl">
-                <Bot className="w-7 h-7" />
-              </div>
-              <h2 className="text-xl font-bold text-zinc-100 mb-2">Codex App Server Chat</h2>
-              <p className="text-xs text-zinc-400 mb-6 leading-relaxed">
-                Connect via JSON-RPC 2.0 WebSocket protocol with live token streaming, reasoning traces, terminal command approvals, and file diff visualizers.
-              </p>
+        <div className="flex-1 flex min-h-0 relative">
+          <div className="flex-1 flex flex-col min-h-0 bg-gradient-to-b from-zinc-950 via-zinc-950 to-zinc-900/30">
+            <ScrollArea className="flex-1 px-2 sm:px-4 py-4">
+              {allItems.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center p-8 max-w-lg mx-auto min-h-[50vh]">
+                  <div className="w-14 h-14 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-emerald-400 mb-4 shadow-xl">
+                    <Bot className="w-7 h-7" />
+                  </div>
+                  <h3 className="font-semibold text-lg text-zinc-100 mb-1">Codex Interactive Agent</h3>
+                  <p className="text-xs text-zinc-400 leading-relaxed max-w-sm mb-6">
+                    Real-time WebSocket protocol client for Codex App Server. Ask questions, execute shell commands, manage patches, or invoke skills and apps.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full text-left">
+                    <button
+                      type="button"
+                      onClick={() => handleSendMessage("Analyze project structure and run diagnostic tests", [], [])}
+                      className="p-3 rounded-xl border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800/80 transition-colors text-xs text-zinc-300"
+                    >
+                      <div className="font-semibold text-emerald-400 flex items-center gap-1 mb-1">
+                        <Terminal className="w-3.5 h-3.5" /> Workspace Analysis
+                      </div>
+                      <div className="text-[11px] text-zinc-500">Run shell commands & inspect files</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSendMessage("Refactor code for high performance and strict TypeScript types", [], [])}
+                      className="p-3 rounded-xl border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800/80 transition-colors text-xs text-zinc-300"
+                    >
+                      <div className="font-semibold text-indigo-400 flex items-center gap-1 mb-1">
+                        <Sparkles className="w-3.5 h-3.5" /> Deep Code Reasoning
+                      </div>
+                      <div className="text-[11px] text-zinc-500">Chain-of-thought with reasoning deltas</div>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="max-w-4xl mx-auto pb-4">
+                  {allItems.map((item) => (
+                    <MessageItem
+                      key={item.id}
+                      item={item}
+                      isStreaming={isTurnInProgress}
+                    />
+                  ))}
+                  <div ref={messagesEndRef} />
+                </div>
+              )}
+            </ScrollArea>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full text-left">
-                <button
-                  type="button"
-                  onClick={() => handleSendMessage("Explain how Codex JSON-RPC 2.0 streaming works", [], [])}
-                  className="p-3 rounded-xl border border-zinc-800/80 bg-zinc-900/60 hover:bg-zinc-800/60 transition-colors cursor-pointer text-xs"
-                >
-                  <div className="font-semibold text-zinc-200 mb-1 flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                    Protocol Architecture
-                  </div>
-                  <div className="text-zinc-500 text-[11px]">Inspect request lifecycle and events</div>
-                </button>
+            <ApprovalBanner
+              commandRequest={commandApproval}
+              fileRequest={fileApproval}
+              onDecideCommand={handleDecideCommand}
+              onDecideFile={handleDecideFile}
+            />
 
-                <button
-                  type="button"
-                  onClick={() => handleSendMessage("Run tests and verify build output with shell command approval", [], [])}
-                  className="p-3 rounded-xl border border-zinc-800/80 bg-zinc-900/60 hover:bg-zinc-800/60 transition-colors cursor-pointer text-xs"
-                >
-                  <div className="font-semibold text-zinc-200 mb-1 flex items-center gap-1.5">
-                    <Terminal className="w-3.5 h-3.5 text-indigo-400" />
-                    Command Approval Flow
-                  </div>
-                  <div className="text-zinc-500 text-[11px]">Trigger live execution approval dialog</div>
-                </button>
+            <ChatInput
+              onSendMessage={handleSendMessage}
+              onSteerTurn={handleSteerTurn}
+              onInterrupt={handleInterrupt}
+              isTurnInProgress={isTurnInProgress}
+              skills={skills}
+              apps={apps}
+              disabled={connectionStatus !== "connected"}
+            />
+          </div>
 
-                <button
-                  type="button"
-                  onClick={() => handleSendMessage("$skill-creator Add a new skill for triaging flaky CI", ["skill-creator"], [])}
-                  className="p-3 rounded-xl border border-zinc-800/80 bg-zinc-900/60 hover:bg-zinc-800/60 transition-colors cursor-pointer text-xs"
-                >
-                  <div className="font-semibold text-purple-300 mb-1 flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-                    Invoke Skill ($)
-                  </div>
-                  <div className="text-zinc-500 text-[11px]">Use $skill-creator generator</div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleSendMessage("@github-connector Check recent PRs and repository diffs", [], ["github-connector"])}
-                  className="p-3 rounded-xl border border-zinc-800/80 bg-zinc-900/60 hover:bg-zinc-800/60 transition-colors cursor-pointer text-xs"
-                >
-                  <div className="font-semibold text-cyan-300 mb-1 flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-                    Invoke Connected App (@)
-                  </div>
-                  <div className="text-zinc-500 text-[11px]">Connect with @github-connector</div>
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="py-4">
-              {currentThread.turns.map((turn: Turn, tIdx: number) => {
-                const isLastTurn = tIdx === currentThread.turns!.length - 1;
-                return (
-                  <div key={turn.id} className="space-y-1">
-                    {turn.items.map((item: ThreadItem) => (
-                      <MessageItem
-                        key={item.id}
-                        item={item}
-                        isStreaming={isLastTurn && isTurnInProgress && item.type === "agentMessage"}
-                      />
-                    ))}
-                  </div>
-                );
-              })}
-              <div ref={messagesEndRef} />
+          {showInspector && (
+            <div className="w-96 border-l border-zinc-800 h-full bg-zinc-950/95 flex flex-col shrink-0 animate-in slide-in-from-right-10 duration-200">
+              <ProtocolInspector logs={logs} onClear={() => setLogs([])} />
             </div>
           )}
         </div>
-
-        <ApprovalBanner
-          commandRequest={commandApproval}
-          fileRequest={fileApproval}
-          onDecideCommand={handleDecideCommand}
-          onDecideFile={handleDecideFile}
-        />
-
-        <ChatInput
-          onSendMessage={handleSendMessage}
-          onSteerTurn={handleSteerTurn}
-          onInterrupt={handleInterrupt}
-          isTurnInProgress={isTurnInProgress}
-          skills={skills}
-          apps={apps}
-          disabled={connectionStatus !== "connected"}
-        />
       </main>
-
-      {showInspector && (
-        <ProtocolInspector
-          logs={logs}
-          onClear={() => {
-            wsClient.clearLogs();
-            setLogs([]);
-          }}
-          onClose={() => setShowInspector(false)}
-        />
-      )}
 
       <SettingsModal
         open={showSettings}
@@ -655,7 +635,10 @@ export default function App() {
         currentWsUrl={wsClient.getUrl()}
         connectionStatus={connectionStatus}
         diagnostics={diagnostics}
-        onSaveWsUrl={handleSaveWsUrl}
+        onSaveWsUrl={(url) => {
+          wsClient.setUrl(url);
+          connectAndInitialize();
+        }}
         onFetchDiagnostics={fetchDiagnostics}
       />
 
@@ -664,7 +647,9 @@ export default function App() {
         onOpenChange={setShowSkillsApps}
         skills={skills}
         apps={apps}
-        onSelectPrompt={(p) => handleSendMessage(p, [], [])}
+        onSelectPrompt={(p) => {
+          handleSendMessage(p, [], []);
+        }}
       />
     </div>
   );

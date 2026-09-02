@@ -3,12 +3,7 @@ import {
   Layers,
   Sparkles,
   Plug,
-  ExternalLink,
-  Check,
-  Wand2,
-  Wrench,
-  Shield,
-  Bot
+  Wand2
 } from "lucide-react";
 import {
   Dialog,
@@ -20,12 +15,12 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/src/components/ui/tabs";
 import { Button } from "@/src/components/ui/button";
 import { Badge } from "@/src/components/ui/badge";
-import { SkillInfo, AppInfo } from "@/src/types/protocol";
+import { SkillMetadata, AppInfo } from "@/src/types/protocol";
 
 interface SkillsAppsModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  skills: SkillInfo[];
+  skills: SkillMetadata[];
   apps: AppInfo[];
   onSelectPrompt: (prompt: string) => void;
 }
@@ -109,13 +104,13 @@ export const SkillsAppsModal: React.FC<SkillsAppsModalProps> = ({
                     <span className="font-semibold text-sm text-cyan-300 font-mono">
                       @{app.id}
                     </span>
-                    <span className="text-xs text-zinc-300 font-sans">({app.name})</span>
-                    {app.isAccessible && (
-                      <Badge variant="info" className="text-[10px] py-0">Accessible</Badge>
+                    <span className="text-xs text-zinc-200 font-medium">({app.name})</span>
+                    {app.isEnabled && (
+                      <Badge variant="info" className="text-[10px] py-0">Connected</Badge>
                     )}
                   </div>
                   <p className="text-xs text-zinc-400 leading-relaxed">
-                    {app.description || "Connected service connector"}
+                    {app.description}
                   </p>
                 </div>
 
@@ -123,13 +118,13 @@ export const SkillsAppsModal: React.FC<SkillsAppsModalProps> = ({
                   size="sm"
                   variant="outline"
                   onClick={() => {
-                    onSelectPrompt(`@${app.id} Summarize latest data`);
+                    onSelectPrompt(`@${app.id} `);
                     onOpenChange(false);
                   }}
                   className="shrink-0 text-xs border-cyan-800/60 text-cyan-300 hover:bg-cyan-950/50"
                 >
                   <Plug className="w-3.5 h-3.5 mr-1" />
-                  Invoke App
+                  Mention App
                 </Button>
               </div>
             ))}

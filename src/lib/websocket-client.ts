@@ -1,10 +1,27 @@
 import {
-  JsonRpcRequest,
-  JsonRpcResponse,
-  JsonRpcNotification,
   InitializeParams,
-  InitializeResult
+  InitializeResponse
 } from "@/src/types/protocol";
+
+export interface JsonRpcRequest {
+  id: number | string;
+  method: string;
+  params?: any;
+  jsonrpc: "2.0";
+}
+
+export interface JsonRpcResponse {
+  id: number | string;
+  result?: any;
+  error?: { code: number; message: string; data?: any };
+  jsonrpc: "2.0";
+}
+
+export interface JsonRpcNotification {
+  method: string;
+  params?: any;
+  jsonrpc: "2.0";
+}
 
 export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
 
@@ -39,7 +56,7 @@ export class CodexWebSocketClient {
   private logs: LogFrame[] = [];
   public status: ConnectionStatus = "disconnected";
   public initialized = false;
-  public initData: InitializeResult | null = null;
+  public initData: InitializeResponse | null = null;
 
   constructor(defaultUrl?: string) {
     if (defaultUrl) {
@@ -99,7 +116,7 @@ export class CodexWebSocketClient {
     this.logListeners.forEach((fn) => fn(fullFrame));
   }
 
-  public connect(): Promise<InitializeResult> {
+  public connect(): Promise<InitializeResponse> {
     return new Promise((resolve, reject) => {
       if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
         if (this.initialized && this.initData) {
@@ -158,7 +175,7 @@ export class CodexWebSocketClient {
     this.rejectAllPending("Disconnected");
   }
 
-  private async performHandshake(): Promise<InitializeResult> {
+  private async performHandshake(): Promise<InitializeResponse> {
     const params: InitializeParams = {
       clientInfo: {
         name: "codex_web_chat",
@@ -167,11 +184,12 @@ export class CodexWebSocketClient {
       },
       capabilities: {
         experimentalApi: true,
+        requestAttestation: false,
         optOutNotificationMethods: []
       }
     };
 
-    const res: InitializeResult = await this.request("initialize", params);
+    const res: InitializeResponse = await this.request("initialize", params);
     this.initialized = true;
     this.initData = res;
     this.notify("initialized", {});

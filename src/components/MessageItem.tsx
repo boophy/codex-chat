@@ -5,15 +5,12 @@ import {
   BrainCircuit,
   Bot,
   User,
-  CheckCircle2,
-  XCircle,
   Copy,
   Check,
   ChevronDown,
   ChevronRight,
   ListTodo,
-  Wrench,
-  Globe
+  Wrench
 } from "lucide-react";
 import { Badge } from "@/src/components/ui/badge";
 import { ThreadItem } from "@/src/types/protocol";
@@ -50,8 +47,8 @@ export const MessageItem: React.FC<MessageItemProps> = ({ item, isStreaming }) =
                 }
                 if (c.type === "skill") {
                   return (
-                    <span key={idx}>
-                      <Badge variant="purple" className="my-1 mr-1">
+                    <span key={idx} className="inline-block mr-1 my-0.5">
+                      <Badge variant="purple">
                         ${c.name}
                       </Badge>
                     </span>
@@ -59,9 +56,9 @@ export const MessageItem: React.FC<MessageItemProps> = ({ item, isStreaming }) =
                 }
                 if (c.type === "mention") {
                   return (
-                    <span key={idx}>
-                      <Badge variant="info" className="my-1 mr-1">
-                        {c.name}
+                    <span key={idx} className="inline-block mr-1 my-0.5">
+                      <Badge variant="info">
+                        @{c.name}
                       </Badge>
                     </span>
                   );
@@ -80,6 +77,9 @@ export const MessageItem: React.FC<MessageItemProps> = ({ item, isStreaming }) =
   }
 
   if (item.type === "reasoning") {
+    const summaryText = Array.isArray(item.summary) ? item.summary.join("\n") : (item.summary || "");
+    const contentText = Array.isArray(item.content) ? item.content.join("\n") : (item.content || "");
+
     return (
       <div className="my-2 px-4 max-w-[95%] sm:max-w-[85%]">
         <div className="border border-zinc-800 bg-zinc-900/50 rounded-xl overflow-hidden text-xs">
@@ -100,8 +100,8 @@ export const MessageItem: React.FC<MessageItemProps> = ({ item, isStreaming }) =
 
           {showReasoning && (
             <div className="p-3 border-t border-zinc-800/80 bg-zinc-950/40 text-zinc-300 font-mono text-[11px] leading-relaxed whitespace-pre-wrap">
-              {item.summary && <div className="text-indigo-300 mb-1 font-sans font-medium">{item.summary}</div>}
-              {item.content && <div className="text-zinc-400">{item.content}</div>}
+              {summaryText && <div className="text-indigo-300 mb-1 font-sans font-medium">{summaryText}</div>}
+              {contentText && <div className="text-zinc-400">{contentText}</div>}
             </div>
           )}
         </div>
@@ -174,34 +174,37 @@ export const MessageItem: React.FC<MessageItemProps> = ({ item, isStreaming }) =
           </div>
 
           <div className="p-3 font-mono text-xs">
-            {item.changes?.map((c, idx) => (
-              <div key={idx} className="mb-2 last:mb-0">
-                <div className="flex items-center justify-between text-zinc-300 text-xs font-semibold mb-1">
-                  <span>{c.path}</span>
-                  <Badge variant="outline" className="text-[9px] py-0">{c.kind}</Badge>
+            {item.changes?.map((c, idx) => {
+              const kindStr = typeof c.kind === "string" ? c.kind : c.kind.type;
+              return (
+                <div key={idx} className="mb-2 last:mb-0">
+                  <div className="flex items-center justify-between text-zinc-300 text-xs font-semibold mb-1">
+                    <span>{c.path}</span>
+                    <Badge variant="outline" className="text-[9px] py-0">{kindStr}</Badge>
+                  </div>
+                  <div className="bg-black/60 rounded-lg p-2.5 overflow-x-auto border border-zinc-800 text-[11px] leading-tight">
+                    {c.diff.split("\n").map((line, lineIdx) => {
+                      const isAdd = line.startsWith("+") && !line.startsWith("+++");
+                      const isDel = line.startsWith("-") && !line.startsWith("---");
+                      const isHdr = line.startsWith("@@") || line.startsWith("---") || line.startsWith("+++");
+                      return (
+                        <div
+                          key={lineIdx}
+                          className={cn(
+                            "whitespace-pre",
+                            isAdd && "text-emerald-400 bg-emerald-950/30",
+                            isDel && "text-red-400 bg-red-950/30",
+                            isHdr && "text-blue-400 font-semibold"
+                          )}
+                        >
+                          {line}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-                <div className="bg-black/60 rounded-lg p-2.5 overflow-x-auto border border-zinc-800 text-[11px] leading-tight">
-                  {c.diff.split("\n").map((line, lineIdx) => {
-                    const isAdd = line.startsWith("+") && !line.startsWith("+++");
-                    const isDel = line.startsWith("-") && !line.startsWith("---");
-                    const isHdr = line.startsWith("@@") || line.startsWith("---") || line.startsWith("+++");
-                    return (
-                      <div
-                        key={lineIdx}
-                        className={cn(
-                          "whitespace-pre",
-                          isAdd && "text-emerald-400 bg-emerald-950/30",
-                          isDel && "text-red-400 bg-red-950/30",
-                          isHdr && "text-blue-400 font-semibold"
-                        )}
-                      >
-                        {line}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
@@ -299,67 +302,33 @@ function renderFormattedText(text: string) {
       const code = firstLineEnd !== -1 ? part.slice(firstLineEnd + 1, -3) : part.slice(3, -3);
 
       return (
-        <div key={index} className="my-3 rounded-lg overflow-hidden border border-zinc-800 bg-zinc-950 font-mono text-xs">
+        <div key={index} className="my-2 rounded-xl border border-zinc-800 bg-zinc-950 overflow-hidden font-mono text-xs">
           {lang && (
-            <div className="px-3 py-1 bg-zinc-900 text-zinc-400 text-[10px] border-b border-zinc-800 flex items-center justify-between font-sans">
-              <span>{lang}</span>
+            <div className="px-3 py-1 bg-zinc-900 border-b border-zinc-800 text-[10px] text-zinc-400 uppercase tracking-wider font-semibold">
+              {lang}
             </div>
           )}
-          <pre className="p-3 overflow-x-auto text-zinc-200 leading-relaxed">
+          <pre className="p-3 overflow-x-auto text-zinc-200 font-mono text-xs leading-normal">
             <code>{code}</code>
           </pre>
         </div>
       );
     }
 
-    const lines = part.split("\n");
+    const inlineParts = part.split(/(`[^`]+`)/g);
     return (
-      <div key={index} className="space-y-1">
-        {lines.map((line, lineIdx) => {
-          if (line.startsWith("### ")) {
-            return <h3 key={lineIdx} className="text-base font-semibold text-zinc-100 mt-2 mb-1">{line.slice(4)}</h3>;
-          }
-          if (line.startsWith("## ")) {
-            return <h2 key={lineIdx} className="text-lg font-semibold text-zinc-100 mt-3 mb-1">{line.slice(3)}</h2>;
-          }
-          if (line.startsWith("# ")) {
-            return <h1 key={lineIdx} className="text-xl font-bold text-zinc-100 mt-4 mb-2">{line.slice(2)}</h1>;
-          }
-          if (line.startsWith("- ")) {
+      <span key={index} className="whitespace-pre-wrap leading-relaxed">
+        {inlineParts.map((sub, sIdx) => {
+          if (sub.startsWith("`") && sub.endsWith("`") && sub.length > 2) {
             return (
-              <div key={lineIdx} className="flex items-start gap-2 pl-2">
-                <span className="text-emerald-400">•</span>
-                <span>{renderInlineMarkdown(line.slice(2))}</span>
-              </div>
+              <code key={sIdx} className="px-1.5 py-0.5 mx-0.5 rounded bg-zinc-800 border border-zinc-700 font-mono text-xs text-emerald-300">
+                {sub.slice(1, -1)}
+              </code>
             );
           }
-          if (!line.trim()) {
-            return <div key={lineIdx} className="h-2" />;
-          }
-          return <p key={lineIdx}>{renderInlineMarkdown(line)}</p>;
+          return sub;
         })}
-      </div>
+      </span>
     );
-  });
-}
-
-function renderInlineMarkdown(str: string) {
-  const segments = str.split(/(`[^`]+`|\*\*[^*]+\*\*)/g);
-  return segments.map((seg, i) => {
-    if (seg.startsWith("`") && seg.endsWith("`")) {
-      return (
-        <code key={i} className="px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-emerald-300 font-mono text-xs">
-          {seg.slice(1, -1)}
-        </code>
-      );
-    }
-    if (seg.startsWith("**") && seg.endsWith("**")) {
-      return (
-        <strong key={i} className="font-semibold text-zinc-100">
-          {seg.slice(2, -2)}
-        </strong>
-      );
-    }
-    return seg;
   });
 }

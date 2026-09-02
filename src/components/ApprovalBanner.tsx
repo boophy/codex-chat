@@ -2,11 +2,11 @@ import * as React from "react";
 import { ShieldAlert, Terminal, FileCode, Check, X, Clock } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { Badge } from "@/src/components/ui/badge";
-import { CommandApprovalRequest, FileChangeApprovalRequest } from "@/src/types/protocol";
+import { CommandExecutionRequestApprovalParams, FileChangeRequestApprovalParams } from "@/src/types/protocol";
 
 interface ApprovalBannerProps {
-  commandRequest: CommandApprovalRequest | null;
-  fileRequest: FileChangeApprovalRequest | null;
+  commandRequest: CommandExecutionRequestApprovalParams | null;
+  fileRequest: FileChangeRequestApprovalParams | null;
   onDecideCommand: (decision: "accept" | "acceptForSession" | "decline" | "cancel") => void;
   onDecideFile: (decision: "accept" | "acceptForSession" | "decline" | "cancel") => void;
 }
@@ -102,7 +102,7 @@ export const ApprovalBanner: React.FC<ApprovalBannerProps> = ({
             <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-3 max-h-48 overflow-y-auto font-mono text-xs text-zinc-200">
               {fileRequest.changes.map((c, idx) => (
                 <div key={idx} className="mb-2 last:mb-0">
-                  <div className="text-amber-300 font-semibold mb-1">{c.path} ({c.kind})</div>
+                  <div className="text-amber-300 font-semibold mb-1">{c.path} ({typeof c.kind === "string" ? c.kind : c.kind.type})</div>
                   <pre className="text-zinc-400 text-[11px] whitespace-pre-wrap">{c.diff}</pre>
                 </div>
               ))}

@@ -1,14 +1,8 @@
 import * as React from "react";
 import {
   Settings,
-  Server,
-  Cpu,
   Activity,
-  Check,
-  RefreshCw,
-  Sliders,
-  Shield,
-  Radio
+  RefreshCw
 } from "lucide-react";
 import {
   Dialog,
@@ -22,7 +16,7 @@ import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Switch } from "@/src/components/ui/switch";
 import { Badge } from "@/src/components/ui/badge";
-import { DiagnosticSnapshot } from "@/src/types/protocol";
+import { ServerDiagnosticsResponse } from "@/src/types/protocol";
 import { ConnectionStatus } from "@/src/lib/websocket-client";
 
 interface SettingsModalProps {
@@ -30,7 +24,7 @@ interface SettingsModalProps {
   onOpenChange: (open: boolean) => void;
   currentWsUrl: string;
   connectionStatus: ConnectionStatus;
-  diagnostics: DiagnosticSnapshot | null;
+  diagnostics: ServerDiagnosticsResponse | null;
   onSaveWsUrl: (url: string) => void;
   onFetchDiagnostics: () => void;
 }
@@ -101,7 +95,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <Switch checked={experimentalApi} onCheckedChange={setExperimentalApi} />
           </div>
 
-          {diagnostics && (
+          {diagnostics?.process && (
             <div className="p-3 rounded-lg border border-zinc-800 bg-zinc-950 font-mono text-[11px] space-y-1.5">
               <div className="flex items-center justify-between text-zinc-400 font-sans font-semibold border-b border-zinc-800 pb-1">
                 <span className="flex items-center gap-1.5">

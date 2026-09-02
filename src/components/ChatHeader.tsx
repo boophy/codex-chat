@@ -1,23 +1,8 @@
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger} from "@/src/components/ui/dropdown-menu";
 import * as React from "react";
-import {
-  Square,
-  Cpu,
-  RefreshCw,
-  Coins,
-  ShieldCheck,
-  Zap,
-  Radio
-} from "lucide-react";
+import { Square, Cpu, Coins, Radio } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { Badge } from "@/src/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger
-} from "@/src/components/ui/dropdown-menu";
 import { Model, ThreadTokenUsage, Thread, AskForApproval } from "@/src/types/protocol";
 import { ConnectionStatus } from "@/src/lib/websocket-client";
 
@@ -104,8 +89,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
               <DropdownMenuItem disabled>No models loaded</DropdownMenuItem>
             ) : (
               models.map((m) => (
-                <DropdownMenuItem
-                  key={m.id || m.model}
+                <DropdownMenuItem key={m.id || m.model}
                   onClick={() => onSelectModel(m.model || m.id)}
                   className={selectedModel === (m.model || m.id) ? "bg-zinc-800 text-emerald-400 font-semibold" : ""}
                 >
@@ -120,8 +104,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
             <DropdownMenuSeparator />
             <DropdownMenuLabel>Reasoning Effort</DropdownMenuLabel>
             {["low", "medium", "high"].map((eff) => (
-              <DropdownMenuItem
-                key={eff}
+              <DropdownMenuItem key={eff}
                 onClick={() => onSelectEffort(eff)}
                 className={selectedEffort === eff ? "bg-zinc-800 text-indigo-400 font-semibold capitalize" : "capitalize"}
               >
@@ -148,10 +131,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
         </DropdownMenu>
 
         {isTurnInProgress ? (
-          <Button
-            size="sm"
-            variant="destructive"
-            onClick={onInterrupt}
+          <Button size="sm" variant="destructive" onClick={onInterrupt}
             className="h-8 gap-1.5 text-xs shadow-sm"
           >
             <Square className="w-3.5 h-3.5 fill-current" />
@@ -159,9 +139,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           </Button>
         ) : null}
 
-        <Button
-          size="sm"
-          variant={showInspector ? "secondary" : "outline"}
+        <Button size="sm" variant={showInspector ? "secondary" : "outline"}
           onClick={onToggleInspector}
           className="h-8 gap-1.5 text-xs border-zinc-800"
           title="JSON-RPC Protocol Inspector"
@@ -170,10 +148,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           <span className="hidden md:inline">Protocol Inspector</span>
         </Button>
 
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={onOpenSettings}
+        <Button size="sm" variant="outline" onClick={onOpenSettings}
           className="h-8 text-xs border-zinc-800 text-zinc-300"
         >
           Settings

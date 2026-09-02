@@ -1,17 +1,5 @@
+import { X, ArrowDownLeft, ArrowUpRight, Search, Trash2, Copy, Check, Code2, Filter, CheckCircle2, AlertTriangle } from "lucide-react";
 import * as React from "react";
-import {
-  X,
-  ArrowDownLeft,
-  ArrowUpRight,
-  Search,
-  Trash2,
-  Copy,
-  Check,
-  Code2,
-  Filter,
-  CheckCircle2,
-  AlertTriangle
-} from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Badge } from "@/src/components/ui/badge";
@@ -41,7 +29,6 @@ export const ProtocolInspector: React.FC<ProtocolInspectorProps> = ({
     if (filterType === "notification" && log.type !== "notification") return false;
     if (filterType === "request" && log.type !== "request") return false;
     if (filterType === "response" && log.type !== "response") return false;
-
     if (search.trim()) {
       const q = search.toLowerCase();
       const matchMethod = log.method?.toLowerCase().includes(q);
@@ -59,7 +46,7 @@ export const ProtocolInspector: React.FC<ProtocolInspectorProps> = ({
   };
 
   return (
-    <aside className="w-96 lg:w-[480px] bg-zinc-950 border-l border-zinc-800 flex flex-col h-full shrink-0 select-none z-20 shadow-2xl">
+    <aside className="w-96 lg:w-120 bg-zinc-950 border-l border-zinc-800 flex flex-col h-full shrink-0 select-none z-20 shadow-2xl">
       <div className="p-3 border-b border-zinc-800 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Code2 className="w-4 h-4 text-indigo-400" />
@@ -68,19 +55,13 @@ export const ProtocolInspector: React.FC<ProtocolInspectorProps> = ({
         </div>
 
         <div className="flex items-center gap-1">
-          <Button
-            size="xsIcon"
-            variant="ghost"
-            onClick={onClear}
+          <Button size="xsIcon" variant="ghost" onClick={onClear}
             className="text-zinc-400 hover:text-zinc-100"
             title="Clear Frame Logs"
           >
             <Trash2 className="w-3.5 h-3.5" />
           </Button>
-          <Button
-            size="xsIcon"
-            variant="ghost"
-            onClick={onClose}
+          <Button size="xsIcon" variant="ghost" onClick={onClose}
             className="text-zinc-400 hover:text-zinc-100"
           >
             <X className="w-4 h-4" />
@@ -91,8 +72,7 @@ export const ProtocolInspector: React.FC<ProtocolInspectorProps> = ({
       <div className="p-2.5 border-b border-zinc-800/80 space-y-2">
         <div className="relative">
           <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-zinc-500" />
-          <Input
-            value={search}
+          <Input value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search methods, IDs, or payloads..."
             className="pl-8 h-8 text-xs bg-zinc-900 border-zinc-800"
@@ -101,10 +81,7 @@ export const ProtocolInspector: React.FC<ProtocolInspectorProps> = ({
 
         <div className="flex flex-wrap items-center gap-1 text-[10px]">
           {["all", "in", "out", "notification", "request", "response"].map((type) => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => setFilterType(type)}
+            <button key={type} type="button" onClick={() => setFilterType(type)}
               className={cn(
                 "px-2 py-0.5 rounded-md capitalize font-medium transition-colors cursor-pointer border",
                 filterType === type
@@ -128,9 +105,7 @@ export const ProtocolInspector: React.FC<ProtocolInspectorProps> = ({
             filteredLogs.map((log) => {
               const isSelected = selectedLog?.id === log.id;
               return (
-                <div
-                  key={log.id}
-                  onClick={() => setSelectedLog(log)}
+                <div key={log.id} onClick={() => setSelectedLog(log)}
                   className={cn(
                     "p-2.5 text-xs font-mono transition-colors cursor-pointer flex items-start justify-between gap-2",
                     isSelected ? "bg-zinc-900 text-zinc-100" : "hover:bg-zinc-900/50 text-zinc-300"
@@ -165,7 +140,7 @@ export const ProtocolInspector: React.FC<ProtocolInspectorProps> = ({
                           </Badge>
                         )}
                       </div>
-                      <span className="text-[10px] text-zinc-500 truncate max-w-[260px]">
+                      <span className="text-[10px] text-zinc-500 truncate max-w-65">
                         {JSON.stringify(log.payload)}
                       </span>
                     </div>
@@ -192,8 +167,7 @@ export const ProtocolInspector: React.FC<ProtocolInspectorProps> = ({
                 </span>
               </div>
 
-              <button
-                type="button"
+              <button type="button"
                 onClick={() => handleCopyPayload(selectedLog.payload)}
                 className="text-zinc-400 hover:text-zinc-200 flex items-center gap-1 text-[11px] p-1"
               >

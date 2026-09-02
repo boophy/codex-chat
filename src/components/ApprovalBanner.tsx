@@ -46,37 +46,27 @@ export const ApprovalBanner: React.FC<ApprovalBannerProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
-            <Button
-              size="sm"
-              variant="outline"
+            <Button size="sm" variant="outline"
               onClick={() => onDecideCommand("cancel")}
               className="text-zinc-400 hover:text-zinc-200 border-zinc-700"
             >
               <X className="w-3.5 h-3.5 mr-1" />
               Cancel Turn
             </Button>
-            <Button
-              size="sm"
-              variant="destructive"
+            <Button size="sm" variant="destructive"
               onClick={() => onDecideCommand("decline")}
             >
               <X className="w-3.5 h-3.5 mr-1" />
               Decline
             </Button>
-            <Button
-              size="sm"
-              variant="secondary"
+            <Button size="sm" variant="secondary"
               onClick={() => onDecideCommand("acceptForSession")}
               className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200"
             >
               <Clock className="w-3.5 h-3.5 mr-1" />
               Allow for Session
             </Button>
-            <Button
-              size="sm"
-              variant="accent"
-              onClick={() => onDecideCommand("accept")}
-            >
+            <Button size="sm" variant="accent" onClick={() => onDecideCommand("accept")}>
               <Check className="w-3.5 h-3.5 mr-1" />
               Approve Once
             </Button>
@@ -110,27 +100,17 @@ export const ApprovalBanner: React.FC<ApprovalBannerProps> = ({
           )}
 
           <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={() => onDecideFile("decline")}
-            >
+            <Button size="sm" variant="destructive" onClick={() => onDecideFile("decline")}>
               <X className="w-3.5 h-3.5 mr-1" />
               Decline
             </Button>
-            <Button
-              size="sm"
-              variant="secondary"
+            <Button size="sm" variant="secondary"
               onClick={() => onDecideFile("acceptForSession")}
             >
               <Clock className="w-3.5 h-3.5 mr-1" />
               Allow for Session
             </Button>
-            <Button
-              size="sm"
-              variant="accent"
-              onClick={() => onDecideFile("accept")}
-            >
+            <Button size="sm" variant="accent" onClick={() => onDecideFile("accept")}>
               <Check className="w-3.5 h-3.5 mr-1" />
               Approve Patch
             </Button>

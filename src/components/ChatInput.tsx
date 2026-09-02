@@ -1,13 +1,5 @@
 import * as React from "react";
-import {
-  Send,
-  Sparkles,
-  Compass,
-  Square,
-  CornerDownLeft,
-  Wand2,
-  Navigation2
-} from "lucide-react";
+import { Send, Navigation2 } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { Textarea } from "@/src/components/ui/textarea";
 import { Badge } from "@/src/components/ui/badge";
@@ -105,8 +97,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         <div className="absolute bottom-full left-4 mb-2 w-72 bg-zinc-900 border border-zinc-700 rounded-xl p-2 shadow-2xl z-20 animate-in fade-in zoom-in-95">
           <div className="text-[11px] font-semibold text-zinc-400 px-2 py-1 flex items-center justify-between border-b border-zinc-800 mb-1">
             <span>{mentionType === "skill" ? "Insert Skill ($)" : "Insert Connected App (@)"}</span>
-            <button
-              type="button"
+            <button type="button"
               onClick={() => setShowMentionMenu(false)}
               className="text-zinc-500 hover:text-zinc-300"
             >
@@ -120,10 +111,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 <div className="text-[11px] text-zinc-500 p-2">No skills discovered</div>
               ) : (
                 skills.map((s) => (
-                  <button
-                    key={s.name}
-                    type="button"
-                    onClick={() => addSkill(s.name)}
+                  <button key={s.name} type="button" onClick={() => addSkill(s.name)}
                     className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-zinc-800 flex items-center justify-between text-xs text-purple-300 font-mono transition-colors"
                   >
                     <span>${s.name}</span>
@@ -136,10 +124,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 <div className="text-[11px] text-zinc-500 p-2">No apps discovered</div>
               ) : (
                 apps.map((a) => (
-                  <button
-                    key={a.id}
-                    type="button"
-                    onClick={() => addApp(a.id)}
+                  <button key={a.id} type="button" onClick={() => addApp(a.id)}
                     className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-zinc-800 flex items-center justify-between text-xs text-cyan-300 font-mono transition-colors"
                   >
                     <span>@{a.id}</span>
@@ -156,14 +141,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         {(attachedSkills.length > 0 || attachedMentions.length > 0) && (
           <div className="flex flex-wrap items-center gap-1.5 px-1">
             {attachedSkills.map((s) => (
-              <button
-                key={s}
-                type="button"
+              <button key={s} type="button" title="Click to remove"
                 onClick={() => setAttachedSkills(attachedSkills.filter((x) => x !== s))}
-                title="Click to remove"
               >
-                <Badge
-                  variant="purple"
+                <Badge variant="purple"
                   className="gap-1 cursor-pointer hover:bg-purple-900/60 text-xs py-0.5"
                 >
                   ${s}
@@ -172,14 +153,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               </button>
             ))}
             {attachedMentions.map((m) => (
-              <button
-                key={m}
-                type="button"
+              <button key={m} type="button" title="Click to remove"
                 onClick={() => setAttachedMentions(attachedMentions.filter((x) => x !== m))}
-                title="Click to remove"
               >
-                <Badge
-                  variant="info"
+                <Badge variant="info"
                   className="gap-1 cursor-pointer hover:bg-blue-900/60 text-xs py-0.5"
                 >
                   @{m}
@@ -191,11 +168,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         )}
 
         <div className="relative flex items-end rounded-2xl border border-zinc-800 bg-zinc-900/90 shadow-lg focus-within:border-zinc-600 focus-within:ring-1 focus-within:ring-zinc-600 transition-all">
-          <Textarea
-            ref={textareaRef}
-            value={text}
-            onChange={handleTextChange}
-            onKeyDown={handleKeyDown}
+          <Textarea ref={textareaRef} value={text} onChange={handleTextChange} onKeyDown={handleKeyDown}
             placeholder={
               isTurnInProgress
                 ? "Agent is working... Type to steer or provide guidance..."
@@ -207,45 +180,34 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           />
 
           <div className="flex items-center gap-1.5 p-2 shrink-0">
-            <button
-              type="button"
+            <button type="button" title="Insert Skill ($)"
               onClick={() => {
                 setMentionType("skill");
                 setShowMentionMenu(!showMentionMenu);
               }}
               className="p-1.5 text-zinc-400 hover:text-purple-400 rounded-lg hover:bg-zinc-800 transition-colors text-xs font-mono font-semibold"
-              title="Insert Skill ($)"
             >
               $
             </button>
-            <button
-              type="button"
+            <button type="button" title="Insert App (@)"
               onClick={() => {
                 setMentionType("app");
                 setShowMentionMenu(!showMentionMenu);
               }}
               className="p-1.5 text-zinc-400 hover:text-cyan-400 rounded-lg hover:bg-zinc-800 transition-colors text-xs font-mono font-semibold"
-              title="Insert App (@)"
             >
               @
             </button>
 
             {isTurnInProgress ? (
-              <Button
-                size="sm"
-                variant="default"
-                onClick={handleSubmit}
-                disabled={!text.trim()}
+              <Button size="sm" variant="default" onClick={handleSubmit} disabled={!text.trim()}
                 className="h-8 gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-medium"
               >
                 <Navigation2 className="w-3.5 h-3.5" />
                 <span>Steer</span>
               </Button>
             ) : (
-              <Button
-                size="xsIcon"
-                variant="accent"
-                onClick={handleSubmit}
+              <Button size="xsIcon" variant="accent" onClick={handleSubmit} 
                 disabled={!text.trim() || disabled}
                 className="w-8 h-8 rounded-xl shadow-xs"
               >

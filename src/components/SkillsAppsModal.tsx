@@ -1,17 +1,6 @@
 import * as React from "react";
-import {
-  Layers,
-  Sparkles,
-  Plug,
-  Wand2
-} from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription
-} from "@/src/components/ui/dialog";
+import { Layers, Sparkles, Plug, Wand2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/src/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/src/components/ui/tabs";
 import { Button } from "@/src/components/ui/button";
 import { Badge } from "@/src/components/ui/badge";
@@ -59,8 +48,7 @@ export const SkillsAppsModal: React.FC<SkillsAppsModalProps> = ({
 
           <TabsContent value="skills" className="flex-1 overflow-y-auto mt-3 space-y-2.5 pr-1">
             {skills.map((skill) => (
-              <div
-                key={skill.name}
+              <div key={skill.name}
                 className="p-3.5 rounded-xl border border-zinc-800 bg-zinc-950/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-zinc-700 transition-colors"
               >
                 <div className="space-y-1 min-w-0">
@@ -77,9 +65,7 @@ export const SkillsAppsModal: React.FC<SkillsAppsModalProps> = ({
                   </p>
                 </div>
 
-                <Button
-                  size="sm"
-                  variant="outline"
+                <Button size="sm" variant="outline"
                   onClick={() => {
                     onSelectPrompt(skill.interface?.defaultPrompt || `$${skill.name} `);
                     onOpenChange(false);
@@ -95,8 +81,7 @@ export const SkillsAppsModal: React.FC<SkillsAppsModalProps> = ({
 
           <TabsContent value="apps" className="flex-1 overflow-y-auto mt-3 space-y-2.5 pr-1">
             {apps.map((app) => (
-              <div
-                key={app.id}
+              <div key={app.id}
                 className="p-3.5 rounded-xl border border-zinc-800 bg-zinc-950/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-zinc-700 transition-colors"
               >
                 <div className="space-y-1 min-w-0">
@@ -114,9 +99,7 @@ export const SkillsAppsModal: React.FC<SkillsAppsModalProps> = ({
                   </p>
                 </div>
 
-                <Button
-                  size="sm"
-                  variant="outline"
+                <Button size="sm" variant="outline"
                   onClick={() => {
                     onSelectPrompt(`@${app.id} `);
                     onOpenChange(false);

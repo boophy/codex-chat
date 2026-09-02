@@ -1,7 +1,4 @@
-import {
-  InitializeParams,
-  InitializeResponse
-} from "@/src/types/protocol";
+import { InitializeParams, InitializeResponse } from "@/src/types/protocol";
 
 export interface JsonRpcRequest {
   id: number | string;
@@ -9,22 +6,18 @@ export interface JsonRpcRequest {
   params?: any;
   jsonrpc: "2.0";
 }
-
 export interface JsonRpcResponse {
   id: number | string;
   result?: any;
   error?: { code: number; message: string; data?: any };
   jsonrpc: "2.0";
 }
-
 export interface JsonRpcNotification {
   method: string;
   params?: any;
   jsonrpc: "2.0";
 }
-
 export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
-
 export interface LogFrame {
   id: string;
   timestamp: number;
@@ -35,7 +28,6 @@ export interface LogFrame {
   payload: any;
   status?: "ok" | "error";
 }
-
 type NotificationHandler = (params: any) => void;
 type RequestHandler = (params: any, respond: (result?: any, error?: any) => void) => void;
 type StatusListener = (status: ConnectionStatus, error?: string) => void;
@@ -203,13 +195,7 @@ export class CodexWebSocketClient {
       }
 
       const id = this.nextId++;
-      const req: JsonRpcRequest = {
-        id,
-        method,
-        params,
-        jsonrpc: "2.0"
-      };
-
+      const req: JsonRpcRequest = { id, method, params, jsonrpc: "2.0" };
       const timeout = setTimeout(() => {
         if (this.pendingRequests.has(id)) {
           this.pendingRequests.delete(id);
@@ -227,7 +213,6 @@ export class CodexWebSocketClient {
       }, timeoutMs);
 
       this.pendingRequests.set(id, { resolve, reject, timeout, method });
-
       this.addLog({
         timestamp: Date.now(),
         direction: "out",
@@ -246,11 +231,7 @@ export class CodexWebSocketClient {
       return;
     }
 
-    const notif: JsonRpcNotification = {
-      method,
-      params,
-      jsonrpc: "2.0"
-    };
+    const notif: JsonRpcNotification = { method, params, jsonrpc: "2.0"};
 
     this.addLog({
       timestamp: Date.now(),
@@ -296,10 +277,7 @@ export class CodexWebSocketClient {
 
         const handler = this.requestHandlers.get(msg.method);
         const respond = (result?: any, error?: any) => {
-          const resp: JsonRpcResponse = {
-            id: msg.id,
-            jsonrpc: "2.0"
-          };
+          const resp: JsonRpcResponse = { id: msg.id, jsonrpc: "2.0" };
           if (error) {
             resp.error = typeof error === "string" ? { code: -32000, message: error } : error;
           } else {

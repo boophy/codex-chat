@@ -6,7 +6,6 @@ export type ThreadId = string;
 export type ResponseItemId = string;
 export type GitSha = string;
 export type JsonValue = number | string | boolean | Array<JsonValue> | { [key in string]?: JsonValue } | null;
-
 export type AuthMode = "apikey" | "chatgpt" | "chatgptAuthTokens" | "headers" | "agentIdentity" | "personalAccessToken" | "bedrockApiKey" | "bedrockAccessKeys";
 export type PlanType = "free" | "go" | "plus" | "pro" | "prolite" | "team" | "self_serve_business_prolite" | "self_serve_business_usage_based" | "business" | "ent26" | "enterprise_cbp_automation" | "enterprise_cbp_usage_based" | "enterprise" | "edu" | "edu_plus" | "edu_pro" | "unknown";
 export type MessagePhase = "commentary" | "final_answer";
@@ -23,12 +22,10 @@ export type ThreadHistoryMode = "legacy" | "paginated";
 export type SessionSource = "cli" | "vscode" | "exec" | "appServer" | { custom: string } | { subAgent: any } | "unknown";
 export type ThreadSource = string;
 export type ThreadSourceKind = "cli" | "vscode" | "exec" | "appServer" | "subAgent" | "subAgentReview" | "subAgentCompact" | "subAgentThreadSpawn" | "subAgentOther" | "unknown";
-
 export type AskForApproval = "untrusted" | "on-request" | { granular: { sandbox_approval: boolean; rules: boolean; skill_approval: boolean; request_permissions: boolean; mcp_elicitations: boolean } } | "never";
 export type ApprovalsReviewer = "user" | "auto_review" | "guardian_subagent";
 export type SandboxMode = "read-only" | "workspace-write" | "danger-full-access";
 export type NetworkAccess = "restricted" | "enabled";
-
 export type SandboxPolicy =
   | { type: "dangerFullAccess" }
   | { type: "readOnly"; networkAccess: boolean }

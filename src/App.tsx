@@ -1,3 +1,4 @@
+import { Thread, Turn, ThreadItem, Model, SkillMetadata, AppInfo, GetAccountRateLimitsResponse, ServerDiagnosticsResponse, ThreadTokenUsage, CommandExecutionRequestApprovalParams, FileChangeRequestApprovalParams, AskForApproval, ReasoningEffort, UserInput } from "@/src/types/protocol";
 import * as React from "react";
 import { wsClient, ConnectionStatus, LogFrame } from "@/src/lib/websocket-client";
 import { Sidebar } from "@/src/components/Sidebar";
@@ -8,22 +9,6 @@ import { ApprovalBanner } from "@/src/components/ApprovalBanner";
 import { ProtocolInspector } from "@/src/components/ProtocolInspector";
 import { SettingsModal } from "@/src/components/SettingsModal";
 import { SkillsAppsModal } from "@/src/components/SkillsAppsModal";
-import {
-  Thread,
-  Turn,
-  ThreadItem,
-  Model,
-  SkillMetadata,
-  AppInfo,
-  GetAccountRateLimitsResponse,
-  ServerDiagnosticsResponse,
-  ThreadTokenUsage,
-  CommandExecutionRequestApprovalParams,
-  FileChangeRequestApprovalParams,
-  AskForApproval,
-  ReasoningEffort,
-  UserInput
-} from "@/src/types/protocol";
 import { ScrollArea } from "@/src/components/ui/scroll-area";
 import { Bot, Sparkles, Terminal } from "lucide-react";
 
@@ -43,17 +28,14 @@ export default function App() {
   const [tokenUsage, setTokenUsage] = React.useState<ThreadTokenUsage | null>(null);
   const [isTurnInProgress, setIsTurnInProgress] = React.useState(false);
   const [activeTurnId, setActiveTurnId] = React.useState<string | null>(null);
-
   const [commandApproval, setCommandApproval] = React.useState<CommandExecutionRequestApprovalParams | null>(null);
   const [fileApproval, setFileApproval] = React.useState<FileChangeRequestApprovalParams | null>(null);
   const commandApprovalResolverRef = React.useRef<((res: any) => void) | null>(null);
   const fileApprovalResolverRef = React.useRef<((res: any) => void) | null>(null);
-
   const [showInspector, setShowInspector] = React.useState(false);
   const [showSettings, setShowSettings] = React.useState(false);
   const [showSkillsApps, setShowSkillsApps] = React.useState(false);
   const [logs, setLogs] = React.useState<LogFrame[]>([]);
-
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -555,7 +537,7 @@ export default function App() {
         />
 
         <div className="flex-1 flex min-h-0 relative">
-          <div className="flex-1 flex flex-col min-h-0 bg-gradient-to-b from-zinc-950 via-zinc-950 to-zinc-900/30">
+          <div className="flex-1 flex flex-col min-h-0 bg-linear-to-b from-zinc-950 via-zinc-950 to-zinc-900/30">
             <ScrollArea className="flex-1 px-2 sm:px-4 py-4">
               {allItems.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center p-8 max-w-lg mx-auto min-h-[50vh]">
@@ -567,8 +549,7 @@ export default function App() {
                     Real-time WebSocket protocol client for Codex App Server. Ask questions, execute shell commands, manage patches, or invoke skills and apps.
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full text-left">
-                    <button
-                      type="button"
+                    <button type="button"
                       onClick={() => handleSendMessage("Analyze project structure and run diagnostic tests", [], [])}
                       className="p-3 rounded-xl border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800/80 transition-colors text-xs text-zinc-300"
                     >
@@ -577,8 +558,7 @@ export default function App() {
                       </div>
                       <div className="text-[11px] text-zinc-500">Run shell commands & inspect files</div>
                     </button>
-                    <button
-                      type="button"
+                    <button type="button"
                       onClick={() => handleSendMessage("Refactor code for high performance and strict TypeScript types", [], [])}
                       className="p-3 rounded-xl border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800/80 transition-colors text-xs text-zinc-300"
                     >
@@ -592,11 +572,7 @@ export default function App() {
               ) : (
                 <div className="max-w-4xl mx-auto pb-4">
                   {allItems.map((item) => (
-                    <MessageItem
-                      key={item.id}
-                      item={item}
-                      isStreaming={isTurnInProgress}
-                    />
+                    <MessageItem key={item.id} item={item} isStreaming={isTurnInProgress}/>
                   ))}
                   <div ref={messagesEndRef} />
                 </div>

@@ -1,17 +1,6 @@
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/src/components/ui/dialog";
 import * as React from "react";
-import {
-  Settings,
-  Activity,
-  RefreshCw
-} from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter
-} from "@/src/components/ui/dialog";
+import { Settings, Activity, RefreshCw } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Switch } from "@/src/components/ui/switch";
@@ -67,16 +56,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <div className="space-y-1.5">
             <label className="text-zinc-300 font-medium flex items-center justify-between">
               <span>WebSocket URL</span>
-              <Badge
-                variant={connectionStatus === "connected" ? "success" : "secondary"}
+              <Badge variant={connectionStatus === "connected" ? "success" : "secondary"}
                 className="text-[10px] py-0"
               >
                 {connectionStatus}
               </Badge>
             </label>
-            <Input
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
+            <Input value={url} onChange={(e) => setUrl(e.target.value)}
               placeholder="ws://127.0.0.1:4500 or /ws"
               className="font-mono text-xs"
             />
@@ -102,9 +88,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <Activity className="w-3.5 h-3.5 text-emerald-400" />
                   Live Server Diagnostics
                 </span>
-                <button
-                  type="button"
-                  onClick={onFetchDiagnostics}
+                <button type="button" onClick={onFetchDiagnostics}
                   className="text-zinc-500 hover:text-zinc-300 p-0.5"
                 >
                   <RefreshCw className="w-3 h-3" />

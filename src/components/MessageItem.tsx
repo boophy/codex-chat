@@ -1,17 +1,5 @@
+import { Terminal, FileCode, BrainCircuit, Bot, User, Copy, Check, ChevronDown, ChevronRight, ListTodo, Wrench } from "lucide-react";
 import * as React from "react";
-import {
-  Terminal,
-  FileCode,
-  BrainCircuit,
-  Bot,
-  User,
-  Copy,
-  Check,
-  ChevronDown,
-  ChevronRight,
-  ListTodo,
-  Wrench
-} from "lucide-react";
 import { Badge } from "@/src/components/ui/badge";
 import { ThreadItem } from "@/src/types/protocol";
 import { cn } from "@/src/lib/utils";
@@ -83,9 +71,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ item, isStreaming }) =
     return (
       <div className="my-2 px-4 max-w-[95%] sm:max-w-[85%]">
         <div className="border border-zinc-800 bg-zinc-900/50 rounded-xl overflow-hidden text-xs">
-          <button
-            type="button"
-            onClick={() => setShowReasoning(!showReasoning)}
+          <button type="button" onClick={() => setShowReasoning(!showReasoning)}
             className="w-full flex items-center justify-between px-3 py-2 bg-zinc-900/80 hover:bg-zinc-800/60 text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
           >
             <div className="flex items-center gap-2 font-medium">
@@ -131,9 +117,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ item, isStreaming }) =
               >
                 {item.status}
               </Badge>
-              <button
-                type="button"
-                onClick={() => handleCopy(item.command)}
+              <button type="button" onClick={() => handleCopy(item.command)}
                 className="text-zinc-500 hover:text-zinc-300 transition-colors p-1"
                 title="Copy command"
               >
@@ -165,8 +149,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ item, isStreaming }) =
               <FileCode className="w-3.5 h-3.5 text-amber-400" />
               <span>Workspace Patch</span>
             </div>
-            <Badge
-              variant={item.status === "completed" ? "success" : "secondary"}
+            <Badge variant={item.status === "completed" ? "success" : "secondary"}
               className="text-[10px] py-0 px-1.5"
             >
               {item.status}
@@ -188,8 +171,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ item, isStreaming }) =
                       const isDel = line.startsWith("-") && !line.startsWith("---");
                       const isHdr = line.startsWith("@@") || line.startsWith("---") || line.startsWith("+++");
                       return (
-                        <div
-                          key={lineIdx}
+                        <div key={lineIdx}
                           className={cn(
                             "whitespace-pre",
                             isAdd && "text-emerald-400 bg-emerald-950/30",
@@ -263,8 +245,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ item, isStreaming }) =
             </div>
             <div className="flex items-center justify-between px-1">
               <span className="text-[10px] text-zinc-500">Codex Agent</span>
-              <button
-                type="button"
+              <button type="button"
                 onClick={() => handleCopy(item.text)}
                 className="text-zinc-500 hover:text-zinc-300 transition-colors p-1 flex items-center gap-1 text-[10px]"
               >
@@ -292,9 +273,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ item, isStreaming }) =
 
 function renderFormattedText(text: string) {
   if (!text) return null;
-
   const parts = text.split(/(```[\s\S]*?```)/g);
-
   return parts.map((part, index) => {
     if (part.startsWith("```") && part.endsWith("```")) {
       const firstLineEnd = part.indexOf("\n");

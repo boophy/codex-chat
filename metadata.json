@@ -1,0 +1,6 @@
+{
+  "name": "Codex Web Chat",
+  "description": "A real-time WebSocket client for Codex App Server supporting threads, turns, streaming events, tool approvals, and JSON-RPC 2.0 communication.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

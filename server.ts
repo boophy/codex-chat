@@ -1,8 +1,12 @@
+import { createServer as createViteServer } from "vite";
+import { bridgeManager } from "./server/bridge-manager";
+import { WebSocketServer, WebSocket } from "ws";
+import { bridgeDb } from "./server/bridge-db";
 import express from "express";
 import http from "http";
 import path from "path";
-import { WebSocketServer, WebSocket } from "ws";
-import { createServer as createViteServer } from "vite";
+import fs from "fs";
+import os from "os";
 
 interface ServerThread {
   id: string;
@@ -176,19 +180,411 @@ async function startServer() {
 
   app.use(express.json());
 
-  app.get("/readyz", (req, res) => {
+  const REAL_BACKEND_URL = process.env.CODEX_BACKEND_URL || (process.env.CODEX_REAL === "1" ? "ws://127.0.0.1:8080" : null);
+
+  app.get("/readyz", async (req, res) => {
+    if (REAL_BACKEND_URL) {
+      try {
+        const httpTarget = REAL_BACKEND_URL.replace(/^ws/, "http");
+        const resp = await fetch(`${httpTarget}/readyz`, { headers: {} });
+        const text = await resp.text();
+        return res.status(resp.status).send(text);
+      } catch (err: any) {
+        return res.status(502).send(`Cannot reach codex /readyz: ${err.message}`);
+      }
+    }
     res.status(200).send("OK");
   });
 
-  app.get("/healthz", (req, res) => {
+  app.get("/healthz", async (req, res) => {
+    if (REAL_BACKEND_URL) {
+      try {
+        const httpTarget = REAL_BACKEND_URL.replace(/^ws/, "http");
+        const resp = await fetch(`${httpTarget}/healthz`, { headers: {} });
+        const text = await resp.text();
+        return res.status(resp.status).send(text);
+      } catch (err: any) {
+        return res.status(502).send(`Cannot reach codex /healthz: ${err.message}`);
+      }
+    }
     res.status(200).send("OK");
   });
 
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", activeThreads: threads.size });
+    res.json({
+      status: "ok",
+      activeThreads: threads.size,
+      mode: REAL_BACKEND_URL ? "real_proxy" : "mock",
+      upstream: REAL_BACKEND_URL || undefined
+    });
   });
 
-  wss.on("connection", (ws: WebSocket) => {
+  // --- Codex Bridge & Process Management Endpoints ---
+  app.get("/api/codex/servers", (req, res) => {
+    res.json({ servers: bridgeManager.listServers() });
+  });
+
+  app.post("/api/codex/servers/start", async (req, res) => {
+    try {
+      const serverInstance = await bridgeManager.startServer({
+        codexHome: req.body.codexHome,
+        listenPort: req.body.listenPort ? parseInt(req.body.listenPort, 10) : undefined,
+        modelProvider: req.body.modelProvider,
+        forceRestart: req.body.forceRestart
+      });
+      res.json({ success: true, server: serverInstance });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post("/api/codex/servers/:id/stop", async (req, res) => {
+    const stopped = await bridgeManager.stopServer(req.params.id);
+    res.json({ success: stopped, id: req.params.id });
+  });
+
+  app.get("/api/codex/servers/:id", (req, res) => {
+    const serverDetails = bridgeManager.getServer(req.params.id);
+    if (!serverDetails) {
+      return res.status(404).json({ error: "Server not found" });
+    }
+    res.json({ server: serverDetails });
+  });
+
+  app.post("/api/codex/threads/ensure-and-save", async (req, res) => {
+    try {
+      const body = req.body;
+      const modelProvider = (body.modelProvider && body.modelProvider.trim()) || "codex-aws";
+      const codexHome = body.codexHome || `~/.${modelProvider}`;
+
+      const serverInst = await bridgeManager.ensureServerForThread({
+        modelProvider,
+        codexHome,
+        model: body.model
+      });
+
+      const threadId = body.id || `thread-cfg-${Date.now()}`;
+      const record = {
+        id: threadId,
+        name: body.name || `Thread (${modelProvider})`,
+        model_provider: modelProvider,
+        model: body.model || "gpt-5",
+        cwd: body.cwd || process.cwd(),
+        approval_policy: typeof body.approvalPolicy === "object" ? JSON.stringify(body.approvalPolicy) : String(body.approvalPolicy || "on-request"),
+        approvals_reviewer: body.approvalsReviewer || "user",
+        config_json: JSON.stringify(body.config || {}),
+        service_name: body.serviceName || "",
+        base_instructions: body.baseInstructions || "",
+        developer_instructions: body.developerInstructions || "",
+        personality: body.personality || "pragmatic",
+        ephemeral: body.ephemeral ? 1 : 0,
+        session_start_source: body.sessionStartSource || "startup",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      bridgeDb.saveThreadConfig(record);
+      bridgeDb.logOperation("THREAD_CONFIG_SAVED", { threadId, modelProvider, serverPort: serverInst.listenPort });
+
+      res.json({
+        success: true,
+        hydratedConfig: {
+          ...body,
+          modelProvider,
+          cwd: record.cwd,
+          targetServer: {
+            id: serverInst.id,
+            listenAddr: serverInst.listenAddr,
+            listenPort: serverInst.listenPort
+          }
+        },
+        savedRecord: record
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.get("/api/codex/threads/configs", (req, res) => {
+    res.json({ configs: bridgeDb.listThreadConfigs() });
+  });
+
+  app.get("/api/codex/config/read", async (req, res) => {
+    try {
+      const provider = (req.query.provider as string) || undefined;
+      const config = await bridgeManager.readConfigToml(provider);
+      res.json({ config });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/codex/account/login/start", async (req, res) => {
+    try {
+      const result = await bridgeManager.handleAccountAction("start", req.body);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post("/api/codex/account/login/cancel", async (req, res) => {
+    try {
+      const result = await bridgeManager.handleAccountAction("cancel", req.body);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post("/api/codex/account/logout", async (req, res) => {
+    try {
+      const result = await bridgeManager.handleAccountAction("logout", req.body);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.get("/api/codex/account/read", async (req, res) => {
+    try {
+      const type = (req.query.type as string) || "chatgpt";
+      const result = await bridgeManager.handleAccountAction("read", { type });
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // --- File System Directory Browsing Endpoints for CWD Picker ---
+  app.get("/api/fs/directories", (req, res) => {
+    try {
+      let reqPath = (req.query.path as string) || "";
+      if (!reqPath || reqPath.trim() === "") {
+        reqPath = process.cwd();
+      } else if (reqPath.startsWith("~")) {
+        reqPath = path.join(os.homedir(), reqPath.slice(1));
+      }
+
+      const resolvedPath = path.resolve(reqPath);
+      if (!fs.existsSync(resolvedPath)) {
+        return res.status(404).json({ error: "Directory does not exist", path: resolvedPath });
+      }
+
+      const stat = fs.statSync(resolvedPath);
+      if (!stat.isDirectory()) {
+        return res.status(400).json({ error: "Path is not a directory", path: resolvedPath });
+      }
+
+      const entries = fs.readdirSync(resolvedPath, { withFileTypes: true });
+      const directories: Array<{ name: string; path: string; isHidden: boolean; mtime?: string }> = [];
+
+      for (const entry of entries) {
+        if (entry.isDirectory()) {
+          const entryPath = path.join(resolvedPath, entry.name);
+          try {
+            const entryStat = fs.statSync(entryPath);
+            directories.push({
+              name: entry.name,
+              path: entryPath,
+              isHidden: entry.name.startsWith("."),
+              mtime: entryStat.mtime.toISOString()
+            });
+          } catch {
+            directories.push({
+              name: entry.name,
+              path: entryPath,
+              isHidden: entry.name.startsWith(".")
+            });
+          }
+        }
+      }
+
+      // Sort: regular directories first alphabetically, hidden directories last
+      directories.sort((a, b) => {
+        if (a.isHidden !== b.isHidden) return a.isHidden ? 1 : -1;
+        return a.name.localeCompare(b.name);
+      });
+
+      const parentPath = path.dirname(resolvedPath);
+      const isRoot = parentPath === resolvedPath;
+
+      const roots = [
+        { name: "Current Project", path: process.cwd() },
+        { name: "User Home (~)", path: os.homedir() },
+        { name: "Root (/)", path: "/" }
+      ];
+
+      res.json({
+        currentPath: resolvedPath,
+        parentPath: isRoot ? null : parentPath,
+        directories,
+        roots
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/fs/create-directory", (req, res) => {
+    try {
+      const { parentPath, dirName } = req.body;
+      if (!dirName || typeof dirName !== "string" || dirName.includes("/") || dirName.includes("\\")) {
+        return res.status(400).json({ error: "Invalid directory name" });
+      }
+      const targetDir = path.resolve(parentPath, dirName);
+      if (fs.existsSync(targetDir)) {
+        return res.status(400).json({ error: "Directory already exists" });
+      }
+      fs.mkdirSync(targetDir, { recursive: true });
+      res.json({ success: true, path: targetDir });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/fs/resolve-folder", (req, res) => {
+    try {
+      const { folderName, currentPath } = req.body;
+      if (!folderName || typeof folderName !== "string") {
+        return res.status(400).json({ error: "folderName is required" });
+      }
+
+      if (path.isAbsolute(folderName)) {
+        return res.json({ fullPath: path.resolve(folderName) });
+      }
+
+      const baseDir = (currentPath && typeof currentPath === "string" && currentPath.trim())
+        ? path.resolve(currentPath.startsWith("~") ? path.join(os.homedir(), currentPath.slice(1)) : currentPath)
+        : process.cwd();
+
+      if (path.basename(baseDir) === folderName) {
+        return res.json({ fullPath: baseDir });
+      }
+
+      const directCandidate = path.join(baseDir, folderName);
+      if (fs.existsSync(directCandidate) && fs.statSync(directCandidate).isDirectory()) {
+        return res.json({ fullPath: directCandidate });
+      }
+
+      const parentDir = path.dirname(baseDir);
+      const siblingCandidate = path.join(parentDir, folderName);
+      if (fs.existsSync(siblingCandidate) && fs.statSync(siblingCandidate).isDirectory()) {
+        return res.json({ fullPath: siblingCandidate });
+      }
+
+      const projCandidate = path.join(process.cwd(), folderName);
+      if (fs.existsSync(projCandidate) && fs.statSync(projCandidate).isDirectory()) {
+        return res.json({ fullPath: projCandidate });
+      }
+
+      const homeCandidate = path.join(os.homedir(), folderName);
+      if (fs.existsSync(homeCandidate) && fs.statSync(homeCandidate).isDirectory()) {
+        return res.json({ fullPath: homeCandidate });
+      }
+
+      if (fs.existsSync("/workspace")) {
+        const wsCandidate = path.join("/workspace", folderName);
+        if (fs.existsSync(wsCandidate) && fs.statSync(wsCandidate).isDirectory()) {
+          return res.json({ fullPath: wsCandidate });
+        }
+      }
+
+      const searchDirs = [process.cwd(), "/workspace", os.homedir()].filter(d => fs.existsSync(d));
+      for (const searchRoot of searchDirs) {
+        try {
+          const entries = fs.readdirSync(searchRoot, { withFileTypes: true });
+          for (const entry of entries) {
+            if (entry.isDirectory()) {
+              if (entry.name === folderName) {
+                return res.json({ fullPath: path.join(searchRoot, entry.name) });
+              }
+              try {
+                const subPath = path.join(searchRoot, entry.name);
+                const subEntries = fs.readdirSync(subPath, { withFileTypes: true });
+                for (const sub of subEntries) {
+                  if (sub.isDirectory() && sub.name === folderName) {
+                    return res.json({ fullPath: path.join(subPath, sub.name) });
+                  }
+                }
+              } catch {
+                // ignore
+              }
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      const fallbackPath = path.resolve(baseDir, folderName);
+      return res.json({ fullPath: fallbackPath });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  wss.on("connection", (ws: WebSocket, req: http.IncomingMessage) => {
+    const reqUrl = new URL(req.url || "/ws", "http://localhost:3000");
+    const targetRealUrl = REAL_BACKEND_URL || (reqUrl.searchParams.get("backend") === "real" ? "ws://127.0.0.1:8080" : null);
+
+    if (targetRealUrl) {
+      console.log(`[Proxy] Forwarding client connection to real Codex server at ${targetRealUrl} (Origin stripped)`);
+      const upstreamWs = new WebSocket(targetRealUrl, {
+        origin: undefined
+      });
+
+      const buffer: any[] = [];
+      let upstreamReady = false;
+
+      upstreamWs.on("open", () => {
+        upstreamReady = true;
+        while (buffer.length > 0) {
+          upstreamWs.send(buffer.shift());
+        }
+      });
+
+      ws.on("message", (msg) => {
+        if (upstreamReady && upstreamWs.readyState === WebSocket.OPEN) {
+          upstreamWs.send(msg);
+        } else {
+          buffer.push(msg);
+        }
+      });
+
+      upstreamWs.on("message", (msg) => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(msg);
+        }
+      });
+
+      ws.on("close", (code, reason) => {
+        if (upstreamWs.readyState === WebSocket.OPEN || upstreamWs.readyState === WebSocket.CONNECTING) {
+          upstreamWs.close();
+        }
+      });
+
+      upstreamWs.on("close", (code, reason) => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.close(code, reason);
+        }
+      });
+
+      upstreamWs.on("error", (err) => {
+        console.error("[Proxy] Upstream error:", err.message);
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.close(1011, `Codex upstream error: ${err.message}`);
+        }
+      });
+
+      ws.on("error", (err) => {
+        console.error("[Proxy] Client error:", err.message);
+        upstreamWs.close();
+      });
+
+      return;
+    }
+
     let activeTurnAbort = false;
     let currentTurnId: string | null = null;
     let pendingApprovalResolver: ((decision: any) => void) | null = null;

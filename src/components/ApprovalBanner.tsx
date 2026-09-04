@@ -1,4 +1,4 @@
-import * as React from "react";
+import { FC } from "react";
 import { ShieldAlert, Terminal, FileCode, Check, X, Clock } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { Badge } from "@/src/components/ui/badge";
@@ -11,7 +11,7 @@ interface ApprovalBannerProps {
   onDecideFile: (decision: "accept" | "acceptForSession" | "decline" | "cancel") => void;
 }
 
-export const ApprovalBanner: React.FC<ApprovalBannerProps> = ({
+export const ApprovalBanner: FC<ApprovalBannerProps> = ({
   commandRequest,
   fileRequest,
   onDecideCommand,

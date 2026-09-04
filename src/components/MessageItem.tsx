@@ -1,5 +1,5 @@
 import { Terminal, FileCode, BrainCircuit, Bot, User, Copy, Check, ChevronDown, ChevronRight, ListTodo, Wrench } from "lucide-react";
-import * as React from "react";
+import { FC, useState } from "react";
 import { Badge } from "@/src/components/ui/badge";
 import { ThreadItem } from "@/src/types/protocol";
 import { cn } from "@/src/lib/utils";
@@ -9,9 +9,9 @@ interface MessageItemProps {
   isStreaming?: boolean;
 }
 
-export const MessageItem: React.FC<MessageItemProps> = ({ item, isStreaming }) => {
-  const [copied, setCopied] = React.useState(false);
-  const [showReasoning, setShowReasoning] = React.useState(true);
+export const MessageItem: FC<MessageItemProps> = ({ item, isStreaming }) => {
+  const [copied, setCopied] = useState(false);
+  const [showReasoning, setShowReasoning] = useState(true);
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);

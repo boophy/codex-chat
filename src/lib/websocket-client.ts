@@ -51,8 +51,11 @@ export class CodexWebSocketClient {
   public initData: InitializeResponse | null = null;
 
   constructor(defaultUrl?: string) {
+    const saved = typeof window !== "undefined" ? localStorage.getItem("codex_ws_url") : null;
     if (defaultUrl) {
       this.url = defaultUrl;
+    } else if (saved) {
+      this.url = saved;
     } else {
       const loc = window.location;
       const proto = loc.protocol === "https:" ? "wss:" : "ws:";
@@ -66,6 +69,20 @@ export class CodexWebSocketClient {
 
   public setUrl(newUrl: string) {
     this.url = newUrl;
+    if (typeof window !== "undefined") {
+      localStorage.setItem("codex_ws_url", newUrl);
+    }
+  }
+
+  public getResolvedUrl(): string {
+    if (this.url.startsWith("ws://") || this.url.startsWith("wss://")) {
+      return this.url;
+    }
+    if (typeof window === "undefined") return this.url;
+    const loc = window.location;
+    const proto = loc.protocol === "https:" ? "wss:" : "ws:";
+    const path = this.url.startsWith("/") ? this.url : `/${this.url}`;
+    return `${proto}//${loc.host}${path}`;
   }
 
   public getLogs(): LogFrame[] {
@@ -120,7 +137,8 @@ export class CodexWebSocketClient {
       this.setStatus("connecting");
 
       try {
-        this.ws = new WebSocket(this.url);
+        const targetUrl = this.getResolvedUrl();
+        this.ws = new WebSocket(targetUrl);
       } catch (err: any) {
         this.setStatus("error", err?.message || "Failed to create WebSocket");
         return reject(err);
@@ -142,7 +160,11 @@ export class CodexWebSocketClient {
       };
 
       this.ws.onerror = () => {
-        this.setStatus("error", "WebSocket connection error");
+        let msg = "WebSocket connection error";
+        if (this.url.includes("127.0.0.1:8080") || this.url.includes("localhost:8080")) {
+          msg = "Connection failed (403 Forbidden). Browser Origin headers are rejected by Codex app-server. Switch to '/ws' or bridge on 'ws://127.0.0.1:8081' in Settings.";
+        }
+        this.setStatus("error", msg);
       };
 
       this.ws.onclose = () => {
@@ -231,7 +253,7 @@ export class CodexWebSocketClient {
       return;
     }
 
-    const notif: JsonRpcNotification = { method, params, jsonrpc: "2.0"};
+    const notif: JsonRpcNotification = { method, params, jsonrpc: "2.0" };
 
     this.addLog({
       timestamp: Date.now(),

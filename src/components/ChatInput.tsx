@@ -1,4 +1,4 @@
-import * as React from "react";
+import { ChangeEvent, FC, useRef, useState } from "react";
 import { Send, Navigation2 } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { Textarea } from "@/src/components/ui/textarea";
@@ -15,7 +15,7 @@ interface ChatInputProps {
   disabled?: boolean;
 }
 
-export const ChatInput: React.FC<ChatInputProps> = ({
+export const ChatInput: FC<ChatInputProps> = ({
   onSendMessage,
   onSteerTurn,
   onInterrupt,
@@ -24,21 +24,21 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   apps,
   disabled
 }) => {
-  const [text, setText] = React.useState("");
-  const [attachedSkills, setAttachedSkills] = React.useState<string[]>([]);
-  const [attachedMentions, setAttachedMentions] = React.useState<string[]>([]);
-  const [showMentionMenu, setShowMentionMenu] = React.useState(false);
-  const [mentionType, setMentionType] = React.useState<"skill" | "app">("skill");
-  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+  const [text, setText] = useState("");
+  const [attachedSkills, setAttachedSkills] = useState<string[]>([]);
+  const [attachedMentions, setAttachedMentions] = useState<string[]>([]);
+  const [showMentionMenu, setShowMentionMenu] = useState(false);
+  const [mentionType, setMentionType] = useState<"skill" | "app">("skill");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
     }
   };
 
-  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleTextChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
     setText(val);
 

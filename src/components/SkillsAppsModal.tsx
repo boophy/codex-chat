@@ -1,4 +1,4 @@
-import * as React from "react";
+import { FC } from "react";
 import { Layers, Sparkles, Plug, Wand2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/src/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/src/components/ui/tabs";
@@ -14,7 +14,7 @@ interface SkillsAppsModalProps {
   onSelectPrompt: (prompt: string) => void;
 }
 
-export const SkillsAppsModal: React.FC<SkillsAppsModalProps> = ({
+export const SkillsAppsModal: FC<SkillsAppsModalProps> = ({
   open,
   onOpenChange,
   skills,

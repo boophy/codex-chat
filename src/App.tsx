@@ -1,48 +1,50 @@
 import { Thread, Turn, ThreadItem, Model, SkillMetadata, AppInfo, GetAccountRateLimitsResponse, ServerDiagnosticsResponse, ThreadTokenUsage, CommandExecutionRequestApprovalParams, FileChangeRequestApprovalParams, AskForApproval, ReasoningEffort, UserInput } from "@/src/types/protocol";
-import * as React from "react";
 import { wsClient, ConnectionStatus, LogFrame } from "@/src/lib/websocket-client";
-import { Sidebar } from "@/src/components/Sidebar";
-import { ChatHeader } from "@/src/components/ChatHeader";
-import { MessageItem } from "@/src/components/MessageItem";
-import { ChatInput } from "@/src/components/ChatInput";
-import { ApprovalBanner } from "@/src/components/ApprovalBanner";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ProtocolInspector } from "@/src/components/ProtocolInspector";
-import { SettingsModal } from "@/src/components/SettingsModal";
+import { NewThreadPage } from "@/src/components/codex/NewThreadPage";
 import { SkillsAppsModal } from "@/src/components/SkillsAppsModal";
+import { ApprovalBanner } from "@/src/components/ApprovalBanner";
+import { Bot, Sparkles, Terminal, Sliders } from "lucide-react";
+import { SettingsModal } from "@/src/components/SettingsModal";
 import { ScrollArea } from "@/src/components/ui/scroll-area";
-import { Bot, Sparkles, Terminal } from "lucide-react";
+import { MessageItem } from "@/src/components/MessageItem";
+import { ChatHeader } from "@/src/components/ChatHeader";
+import { ChatInput } from "@/src/components/ChatInput";
+import { Sidebar } from "@/src/components/Sidebar";
 
 export default function App() {
-  const [connectionStatus, setConnectionStatus] = React.useState<ConnectionStatus>("disconnected");
-  const [threads, setThreads] = React.useState<Thread[]>([]);
-  const [activeThreadId, setActiveThreadId] = React.useState<string | null>(null);
-  const [currentThread, setCurrentThread] = React.useState<Thread | null>(null);
-  const [models, setModels] = React.useState<Model[]>([]);
-  const [skills, setSkills] = React.useState<SkillMetadata[]>([]);
-  const [apps, setApps] = React.useState<AppInfo[]>([]);
-  const [rateLimits, setRateLimits] = React.useState<GetAccountRateLimitsResponse | null>(null);
-  const [diagnostics, setDiagnostics] = React.useState<ServerDiagnosticsResponse | null>(null);
-  const [selectedModel, setSelectedModel] = React.useState("gpt-5.4-codex");
-  const [selectedEffort, setSelectedEffort] = React.useState<ReasoningEffort>("medium");
-  const [approvalPolicy, setApprovalPolicy] = React.useState<AskForApproval>("on-request");
-  const [tokenUsage, setTokenUsage] = React.useState<ThreadTokenUsage | null>(null);
-  const [isTurnInProgress, setIsTurnInProgress] = React.useState(false);
-  const [activeTurnId, setActiveTurnId] = React.useState<string | null>(null);
-  const [commandApproval, setCommandApproval] = React.useState<CommandExecutionRequestApprovalParams | null>(null);
-  const [fileApproval, setFileApproval] = React.useState<FileChangeRequestApprovalParams | null>(null);
-  const commandApprovalResolverRef = React.useRef<((res: any) => void) | null>(null);
-  const fileApprovalResolverRef = React.useRef<((res: any) => void) | null>(null);
-  const [showInspector, setShowInspector] = React.useState(false);
-  const [showSettings, setShowSettings] = React.useState(false);
-  const [showSkillsApps, setShowSkillsApps] = React.useState(false);
-  const [logs, setLogs] = React.useState<LogFrame[]>([]);
-  const messagesEndRef = React.useRef<HTMLDivElement>(null);
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("disconnected");
+  const [currentView, setCurrentView] = useState<"chat" | "new-thread">("chat");
+  const [threads, setThreads] = useState<Thread[]>([]);
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
+  const [currentThread, setCurrentThread] = useState<Thread | null>(null);
+  const [models, setModels] = useState<Model[]>([]);
+  const [skills, setSkills] = useState<SkillMetadata[]>([]);
+  const [apps, setApps] = useState<AppInfo[]>([]);
+  const [rateLimits, setRateLimits] = useState<GetAccountRateLimitsResponse | null>(null);
+  const [diagnostics, setDiagnostics] = useState<ServerDiagnosticsResponse | null>(null);
+  const [selectedModel, setSelectedModel] = useState("gpt-5.4-codex");
+  const [selectedEffort, setSelectedEffort] = useState<ReasoningEffort>("medium");
+  const [approvalPolicy, setApprovalPolicy] = useState<AskForApproval>("on-request");
+  const [tokenUsage, setTokenUsage] = useState<ThreadTokenUsage | null>(null);
+  const [isTurnInProgress, setIsTurnInProgress] = useState(false);
+  const [activeTurnId, setActiveTurnId] = useState<string | null>(null);
+  const [commandApproval, setCommandApproval] = useState<CommandExecutionRequestApprovalParams | null>(null);
+  const [fileApproval, setFileApproval] = useState<FileChangeRequestApprovalParams | null>(null);
+  const commandApprovalResolverRef = useRef<((res: any) => void) | null>(null);
+  const fileApprovalResolverRef = useRef<((res: any) => void) | null>(null);
+  const [showInspector, setShowInspector] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showSkillsApps, setShowSkillsApps] = useState(false);
+  const [logs, setLogs] = useState<LogFrame[]>([]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const connectAndInitialize = React.useCallback(async () => {
+  const connectAndInitialize = useCallback(async () => {
     try {
       await wsClient.connect();
       await fetchInitialData();
@@ -105,7 +107,7 @@ export default function App() {
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     const unsubStatus = wsClient.onStatusChange((status) => {
       setConnectionStatus(status);
     });
@@ -324,6 +326,7 @@ export default function App() {
 
   const selectThread = async (threadId: string) => {
     setActiveThreadId(threadId);
+    setCurrentView("chat");
     try {
       const res = await wsClient.request("thread/read", { threadId, includeTurns: true });
       if (res?.thread) {
@@ -338,19 +341,27 @@ export default function App() {
     }
   };
 
-  const handleNewThread = async () => {
+  const handleNewThread = async (customParams?: any) => {
     try {
-      const res = await wsClient.request("thread/start", {
+      const payload: any = {
         model: selectedModel,
-        approvalPolicy
-      });
+        approvalPolicy,
+        ...(customParams || {})
+      };
+      const res = await wsClient.request("thread/start", payload);
       if (res?.thread) {
         setThreads((prev) => [res.thread, ...prev]);
         setActiveThreadId(res.thread.id);
         setCurrentThread(res.thread);
+        if (payload.model) {
+          setSelectedModel(payload.model);
+        }
+        if (payload.approvalPolicy) {
+          setApprovalPolicy(payload.approvalPolicy);
+        }
       }
     } catch (err) {
-      console.error(err);
+      console.error("[App] Failed to start new thread:", err);
     }
   };
 
@@ -495,7 +506,7 @@ export default function App() {
     }
   };
 
-  const allItems: ThreadItem[] = React.useMemo(() => {
+  const allItems: ThreadItem[] = useMemo(() => {
     if (!currentThread || !currentThread.turns) return [];
     return currentThread.turns.flatMap((t) => t.items || []);
   }, [currentThread]);
@@ -507,8 +518,13 @@ export default function App() {
         activeThreadId={activeThreadId}
         connectionStatus={connectionStatus}
         rateLimits={rateLimits}
+        models={models}
+        selectedModel={selectedModel}
+        selectedEffort={selectedEffort}
+        approvalPolicy={approvalPolicy}
         onSelectThread={selectThread}
         onNewThread={handleNewThread}
+        onOpenNewThreadPage={() => setCurrentView("new-thread")}
         onForkThread={handleForkThread}
         onArchiveThread={handleArchiveThread}
         onDeleteThread={handleDeleteThread}
@@ -516,94 +532,117 @@ export default function App() {
         onReconnect={connectAndInitialize}
       />
 
-      <main className="flex-1 flex flex-col min-w-0 h-full relative bg-zinc-950">
-        <ChatHeader
-          currentThread={currentThread}
+      {currentView === "new-thread" ? (
+        <NewThreadPage
           models={models}
-          selectedModel={selectedModel}
-          selectedEffort={selectedEffort}
-          approvalPolicy={approvalPolicy}
-          tokenUsage={tokenUsage}
-          isTurnInProgress={isTurnInProgress}
-          connectionStatus={connectionStatus}
-          showInspector={showInspector}
-          onSelectModel={setSelectedModel}
-          onSelectEffort={(eff) => setSelectedEffort(eff as ReasoningEffort)}
-          onSelectApprovalPolicy={setApprovalPolicy}
-          onInterrupt={handleInterrupt}
-          onToggleInspector={() => setShowInspector(!showInspector)}
-          onOpenSettings={() => setShowSettings(true)}
-          onReconnect={connectAndInitialize}
+          currentModel={selectedModel}
+          currentEffort={selectedEffort}
+          currentApprovalPolicy={approvalPolicy}
+          onBack={() => setCurrentView("chat")}
+          onStartThread={async (params) => {
+            await handleNewThread(params);
+            setCurrentView("chat");
+          }}
         />
+      ) : (
+        <main className="flex-1 flex flex-col min-w-0 h-full relative bg-zinc-950">
+          <ChatHeader
+            currentThread={currentThread}
+            models={models}
+            selectedModel={selectedModel}
+            selectedEffort={selectedEffort}
+            approvalPolicy={approvalPolicy}
+            tokenUsage={tokenUsage}
+            isTurnInProgress={isTurnInProgress}
+            connectionStatus={connectionStatus}
+            showInspector={showInspector}
+            onSelectModel={setSelectedModel}
+            onSelectEffort={(eff) => setSelectedEffort(eff as ReasoningEffort)}
+            onSelectApprovalPolicy={setApprovalPolicy}
+            onInterrupt={handleInterrupt}
+            onToggleInspector={() => setShowInspector(!showInspector)}
+            onOpenSettings={() => setShowSettings(true)}
+            onReconnect={connectAndInitialize}
+          />
 
-        <div className="flex-1 flex min-h-0 relative">
-          <div className="flex-1 flex flex-col min-h-0 bg-linear-to-b from-zinc-950 via-zinc-950 to-zinc-900/30">
-            <ScrollArea className="flex-1 px-2 sm:px-4 py-4">
-              {allItems.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-center p-8 max-w-lg mx-auto min-h-[50vh]">
-                  <div className="w-14 h-14 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-emerald-400 mb-4 shadow-xl">
-                    <Bot className="w-7 h-7" />
+          <div className="flex-1 flex min-h-0 relative">
+            <div className="flex-1 flex flex-col min-h-0 bg-linear-to-b from-zinc-950 via-zinc-950 to-zinc-900/30">
+              <ScrollArea className="flex-1 px-2 sm:px-4 py-4">
+                {allItems.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-8 max-w-lg mx-auto min-h-[50vh]">
+                    <div className="w-14 h-14 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-emerald-400 mb-4 shadow-xl">
+                      <Bot className="w-7 h-7" />
+                    </div>
+                    <h3 className="font-semibold text-lg text-zinc-100 mb-1">Codex Interactive Agent</h3>
+                    <p className="text-xs text-zinc-400 leading-relaxed max-w-sm mb-6">
+                      Real-time WebSocket protocol client for Codex App Server. Ask questions, execute shell commands, manage patches, or invoke skills and apps.
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full text-left">
+                      <button type="button"
+                        onClick={() => setCurrentView("new-thread")}
+                        className="p-3 rounded-xl border border-emerald-800/40 bg-emerald-950/20 hover:bg-emerald-950/40 transition-colors text-xs text-zinc-300 cursor-pointer"
+                      >
+                        <div className="font-semibold text-emerald-400 flex items-center gap-1 mb-1">
+                          <Sliders className="w-3.5 h-3.5" /> Thread Config
+                        </div>
+                        <div className="text-[11px] text-zinc-500">Working directory, model & ConfigToml</div>
+                      </button>
+                      <button type="button"
+                        onClick={() => handleSendMessage("Analyze project structure and run diagnostic tests", [], [])}
+                        className="p-3 rounded-xl border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800/80 transition-colors text-xs text-zinc-300 cursor-pointer"
+                      >
+                        <div className="font-semibold text-emerald-400 flex items-center gap-1 mb-1">
+                          <Terminal className="w-3.5 h-3.5" /> Workspace Analysis
+                        </div>
+                        <div className="text-[11px] text-zinc-500">Run shell commands & inspect files</div>
+                      </button>
+                      <button type="button"
+                        onClick={() => handleSendMessage("Refactor code for high performance and strict TypeScript types", [], [])}
+                        className="p-3 rounded-xl border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800/80 transition-colors text-xs text-zinc-300 cursor-pointer"
+                      >
+                        <div className="font-semibold text-indigo-400 flex items-center gap-1 mb-1">
+                          <Sparkles className="w-3.5 h-3.5" /> Deep Code Reasoning
+                        </div>
+                        <div className="text-[11px] text-zinc-500">Chain-of-thought with reasoning deltas</div>
+                      </button>
+                    </div>
                   </div>
-                  <h3 className="font-semibold text-lg text-zinc-100 mb-1">Codex Interactive Agent</h3>
-                  <p className="text-xs text-zinc-400 leading-relaxed max-w-sm mb-6">
-                    Real-time WebSocket protocol client for Codex App Server. Ask questions, execute shell commands, manage patches, or invoke skills and apps.
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full text-left">
-                    <button type="button"
-                      onClick={() => handleSendMessage("Analyze project structure and run diagnostic tests", [], [])}
-                      className="p-3 rounded-xl border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800/80 transition-colors text-xs text-zinc-300"
-                    >
-                      <div className="font-semibold text-emerald-400 flex items-center gap-1 mb-1">
-                        <Terminal className="w-3.5 h-3.5" /> Workspace Analysis
-                      </div>
-                      <div className="text-[11px] text-zinc-500">Run shell commands & inspect files</div>
-                    </button>
-                    <button type="button"
-                      onClick={() => handleSendMessage("Refactor code for high performance and strict TypeScript types", [], [])}
-                      className="p-3 rounded-xl border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800/80 transition-colors text-xs text-zinc-300"
-                    >
-                      <div className="font-semibold text-indigo-400 flex items-center gap-1 mb-1">
-                        <Sparkles className="w-3.5 h-3.5" /> Deep Code Reasoning
-                      </div>
-                      <div className="text-[11px] text-zinc-500">Chain-of-thought with reasoning deltas</div>
-                    </button>
+                ) : (
+                  <div className="max-w-6xl mx-auto pb-4">
+                    {allItems.map((item) => (
+                      <MessageItem key={item.id} item={item} isStreaming={isTurnInProgress}/>
+                    ))}
+                    <div ref={messagesEndRef} />
                   </div>
-                </div>
-              ) : (
-                <div className="max-w-4xl mx-auto pb-4">
-                  {allItems.map((item) => (
-                    <MessageItem key={item.id} item={item} isStreaming={isTurnInProgress}/>
-                  ))}
-                  <div ref={messagesEndRef} />
-                </div>
-              )}
-            </ScrollArea>
+                )}
+              </ScrollArea>
 
-            <ApprovalBanner
-              commandRequest={commandApproval}
-              fileRequest={fileApproval}
-              onDecideCommand={handleDecideCommand}
-              onDecideFile={handleDecideFile}
-            />
+              <ApprovalBanner
+                commandRequest={commandApproval}
+                fileRequest={fileApproval}
+                onDecideCommand={handleDecideCommand}
+                onDecideFile={handleDecideFile}
+              />
 
-            <ChatInput
-              onSendMessage={handleSendMessage}
-              onSteerTurn={handleSteerTurn}
-              onInterrupt={handleInterrupt}
-              isTurnInProgress={isTurnInProgress}
-              skills={skills}
-              apps={apps}
-              disabled={connectionStatus !== "connected"}
-            />
-          </div>
-
-          {showInspector && (
-            <div className="w-96 border-l border-zinc-800 h-full bg-zinc-950/95 flex flex-col shrink-0 animate-in slide-in-from-right-10 duration-200">
-              <ProtocolInspector logs={logs} onClear={() => setLogs([])} />
+              <ChatInput
+                onSendMessage={handleSendMessage}
+                onSteerTurn={handleSteerTurn}
+                onInterrupt={handleInterrupt}
+                isTurnInProgress={isTurnInProgress}
+                skills={skills}
+                apps={apps}
+                disabled={connectionStatus !== "connected"}
+              />
             </div>
-          )}
-        </div>
-      </main>
+
+            {showInspector && (
+              <div className="w-96 border-l border-zinc-800 h-full bg-zinc-950/95 flex flex-col shrink-0 animate-in slide-in-from-right-10 duration-200">
+                <ProtocolInspector logs={logs} onClear={() => setLogs([])} onClose={()=>setShowInspector(false)}/>
+              </div>
+            )}
+          </div>
+        </main>
+      )}
 
       <SettingsModal
         open={showSettings}
@@ -623,9 +662,7 @@ export default function App() {
         onOpenChange={setShowSkillsApps}
         skills={skills}
         apps={apps}
-        onSelectPrompt={(p) => {
-          handleSendMessage(p, [], []);
-        }}
+        onSelectPrompt={(p) => { handleSendMessage(p, [], []);}}
       />
     </div>
   );

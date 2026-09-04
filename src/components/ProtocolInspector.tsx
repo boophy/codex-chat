@@ -1,10 +1,9 @@
-import { X, ArrowDownLeft, ArrowUpRight, Search, Trash2, Copy, Check, Code2, Filter, CheckCircle2, AlertTriangle } from "lucide-react";
-import * as React from "react";
+import { X, ArrowDownLeft, ArrowUpRight, Search, Trash2, Copy, Check, Code2 } from "lucide-react";
+import { LogFrame } from "@/src/lib/websocket-client";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Badge } from "@/src/components/ui/badge";
-import { ScrollArea } from "@/src/components/ui/scroll-area";
-import { LogFrame } from "@/src/lib/websocket-client";
+import { FC, useState } from "react";
 import { cn } from "@/src/lib/utils";
 
 interface ProtocolInspectorProps {
@@ -13,15 +12,15 @@ interface ProtocolInspectorProps {
   onClose: () => void;
 }
 
-export const ProtocolInspector: React.FC<ProtocolInspectorProps> = ({
+export const ProtocolInspector: FC<ProtocolInspectorProps> = ({
   logs,
   onClear,
   onClose
 }) => {
-  const [filterType, setFilterType] = React.useState<string>("all");
-  const [search, setSearch] = React.useState<string>("");
-  const [selectedLog, setSelectedLog] = React.useState<LogFrame | null>(null);
-  const [copied, setCopied] = React.useState(false);
+  const [filterType, setFilterType] = useState<string>("all");
+  const [search, setSearch] = useState<string>("");
+  const [selectedLog, setSelectedLog] = useState<LogFrame | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const filteredLogs = logs.filter((log) => {
     if (filterType === "in" && log.direction !== "in") return false;

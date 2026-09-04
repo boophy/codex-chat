@@ -1,12 +1,12 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/src/components/ui/dialog";
-import * as React from "react";
-import { Settings, Activity, RefreshCw } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter} from "@/src/components/ui/dialog";
+import { Settings, Activity, RefreshCw, CheckCircle2, XCircle, Terminal } from "lucide-react";
+import { ServerDiagnosticsResponse } from "@/src/types/protocol";
+import { ConnectionStatus } from "@/src/lib/websocket-client";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Switch } from "@/src/components/ui/switch";
 import { Badge } from "@/src/components/ui/badge";
-import { ServerDiagnosticsResponse } from "@/src/types/protocol";
-import { ConnectionStatus } from "@/src/lib/websocket-client";
+import { FC, useEffect, useState } from "react";
 
 interface SettingsModalProps {
   open: boolean;
@@ -18,7 +18,7 @@ interface SettingsModalProps {
   onFetchDiagnostics: () => void;
 }
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({
+export const SettingsModal: FC<SettingsModalProps> = ({
   open,
   onOpenChange,
   currentWsUrl,
@@ -27,16 +27,48 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onSaveWsUrl,
   onFetchDiagnostics
 }) => {
-  const [url, setUrl] = React.useState(currentWsUrl);
-  const [experimentalApi, setExperimentalApi] = React.useState(true);
+  const [url, setUrl] = useState(currentWsUrl);
+  const [experimentalApi, setExperimentalApi] = useState(true);
+  const [checkingHealth, setCheckingHealth] = useState(false);
+  const [healthStatus, setHealthStatus] = useState<{
+    readyz?: { ok: boolean; text: string; code?: number };
+    healthz?: { ok: boolean; text: string; code?: number };
+    error?: string;
+  } | null>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setUrl(currentWsUrl);
+    setHealthStatus(null);
   }, [currentWsUrl, open]);
 
   const handleSave = () => {
     onSaveWsUrl(url.trim());
     onOpenChange(false);
+  };
+
+  const handleCheckHealth = async () => {
+    setCheckingHealth(true);
+    setHealthStatus(null);
+    try {
+      const [readyzRes, healthzRes] = await Promise.all([
+        fetch("/readyz").catch((e) => ({ ok: false, status: 0, text: () => Promise.resolve(e.message) })),
+        fetch("/healthz").catch((e) => ({ ok: false, status: 0, text: () => Promise.resolve(e.message) }))
+      ]);
+
+      const readyzText = typeof readyzRes.text === "function" ? await readyzRes.text() : "Failed";
+      const healthzText = typeof healthzRes.text === "function" ? await healthzRes.text() : "Failed";
+
+      setHealthStatus({
+        readyz: { ok: readyzRes.ok, text: readyzText, code: readyzRes.status },
+        healthz: { ok: healthzRes.ok, text: healthzText, code: healthzRes.status }
+      });
+    } catch (err: any) {
+      setHealthStatus({
+        error: err?.message || "Failed to query health endpoints"
+      });
+    } finally {
+      setCheckingHealth(false);
+    }
   };
 
   return (
@@ -53,22 +85,105 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </DialogHeader>
 
         <div className="space-y-4 py-2 text-xs">
-          <div className="space-y-1.5">
-            <label className="text-zinc-300 font-medium flex items-center justify-between">
+          <div className="space-y-2">
+            <div className="text-zinc-300 font-medium flex items-center justify-between">
               <span>WebSocket URL</span>
               <Badge variant={connectionStatus === "connected" ? "success" : "secondary"}
                 className="text-[10px] py-0"
               >
                 {connectionStatus}
               </Badge>
-            </label>
+            </div>
+
             <Input value={url} onChange={(e) => setUrl(e.target.value)}
-              placeholder="ws://127.0.0.1:4500 or /ws"
+              placeholder="ws://127.0.0.1:8080 or /ws"
               className="font-mono text-xs"
             />
-            <span className="text-[10px] text-zinc-500">
-              Default is relative <code className="text-zinc-400">/ws</code>. You can point to any local or remote <code className="text-zinc-400">codex app-server --listen ws://...</code>
-            </span>
+
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+              <span className="text-[10px] text-zinc-500">Presets:</span>
+              <button type="button" onClick={() => setUrl("/ws")}
+                className="px-2 py-0.5 rounded bg-indigo-950/70 hover:bg-indigo-900 text-indigo-300 font-mono text-[10px] transition-colors border border-indigo-700/60"
+              >
+                /ws (Proxy - Fixes 403)
+              </button>
+              <button type="button" onClick={() => setUrl("ws://127.0.0.1:8081")}
+                className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-mono text-[10px] transition-colors border border-zinc-700"
+              >
+                ws://127.0.0.1:8081 (Bridge)
+              </button>
+              <button type="button" onClick={() => setUrl("ws://127.0.0.1:8080")}
+                className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-400 font-mono text-[10px] transition-colors border border-zinc-700"
+              >
+                ws://127.0.0.1:8080 (Direct)
+              </button>
+            </div>
+{/* 
+            <div className="p-2.5 rounded bg-amber-950/30 border border-amber-800/40 text-[10px] space-y-1 text-amber-300/90">
+              <div className="font-semibold text-amber-200 flex items-center gap-1">
+                <span>⚠️ Why direct ws://127.0.0.1:8080 returns 403:</span>
+              </div>
+              <p className="text-zinc-300 leading-relaxed">
+                Codex app-server restricts browser handshakes and rejects any connection with an <code className="text-amber-300 font-mono">Origin</code> header (HTTP 403). Web browsers forcibly attach this header.
+              </p>
+              <p className="text-zinc-300 leading-relaxed">
+                👉 <strong>Solution:</strong> Set URL to <code className="text-indigo-300 font-mono font-bold">/ws</code> (Vite/Express strips the Origin header), or run <code className="text-indigo-300 font-mono">npm run codex:bridge</code> and connect to <code className="text-indigo-300 font-mono">ws://127.0.0.1:8081</code>.
+              </p>
+            </div> */}
+          </div>
+
+          <div className="p-3 rounded-lg border border-zinc-800 bg-zinc-950/80 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-zinc-200 font-medium">
+                <Terminal className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Real Backend Quick Start</span>
+              </div>
+              <Button type="button" variant="outline" size="sm" onClick={handleCheckHealth}
+                disabled={checkingHealth}
+                className="h-6 text-[10px] px-2 gap-1 border-zinc-700"
+              >
+                <RefreshCw className={`w-2.5 h-2.5 ${checkingHealth ? "animate-spin" : ""}`} />
+                Check /readyz
+              </Button>
+            </div>
+
+            <div className="bg-black/60 rounded p-2.5 font-mono text-[10px] text-zinc-300 border border-zinc-900 space-y-1.5">
+              <div>
+                <div className="text-emerald-400 font-semibold"># 1. Start Codex App-Server</div>
+                <div className="text-zinc-400">./codex app-server --listen ws://127.0.0.1:8080</div>
+              </div>
+
+              <div>
+                <div className="text-indigo-400 font-semibold"># 2. Start Frontend (Vite with Origin-stripping Proxy)</div>
+                <div className="text-zinc-400">npm run dev:real</div>
+                <div className="text-[9px] text-zinc-500">Connect to &quot;/ws&quot; in the web UI.</div>
+              </div>
+
+              <div>
+                <div className="text-purple-400 font-semibold"># Alternative: Run Dedicated WebSocket Bridge</div>
+                <div className="text-zinc-400">npm run codex:bridge</div>
+                <div className="text-[9px] text-zinc-500">Connect to &quot;ws://127.0.0.1:8081&quot; in the web UI.</div>
+              </div>
+            </div>
+
+            {healthStatus && (
+              <div className="mt-1 pt-1 border-t border-zinc-800/80 space-y-1 text-[11px] font-mono">
+                <div className="flex items-center justify-between">
+                  <span className="text-zinc-400">/readyz:</span>
+                  <span className={`flex items-center gap-1 ${healthStatus.readyz?.ok ? "text-emerald-400" : "text-amber-400"}`}>
+                    {healthStatus.readyz?.ok ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                    {healthStatus.readyz?.text || "Offline"} ({healthStatus.readyz?.code || 0})
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-zinc-400">/healthz:</span>
+                  <span className={`flex items-center gap-1 ${healthStatus.healthz?.ok ? "text-emerald-400" : "text-amber-400"}`}>
+                    {healthStatus.healthz?.ok ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                    {healthStatus.healthz?.text || "Offline"} ({healthStatus.healthz?.code || 0})
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center justify-between p-3 rounded-lg border border-zinc-800 bg-zinc-950/60">
@@ -100,7 +215,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
               <div className="flex justify-between text-zinc-300">
                 <span>Memory (RSS):</span>
-                <span>{(diagnostics.process.residentMemoryBytes / (1024 * 1024)).toFixed(1)} MB</span>
+                <span>
+                  {diagnostics.process.residentMemoryBytes != null
+                    ? `${(diagnostics.process.residentMemoryBytes / (1024 * 1024)).toFixed(1)} MB`
+                    : "N/A"}
+                </span>
               </div>
               {diagnostics.gauges?.map((g, idx) => (
                 <div key={idx} className="flex justify-between text-zinc-400">

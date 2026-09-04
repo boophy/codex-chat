@@ -1,10 +1,10 @@
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger} from "@/src/components/ui/dropdown-menu";
-import * as React from "react";
-import { Square, Cpu, Coins, Radio } from "lucide-react";
+import { FC, useState } from "react";
+import { Cpu, Coins, Square, Radio } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { Badge } from "@/src/components/ui/badge";
 import { Model, ThreadTokenUsage, Thread, AskForApproval } from "@/src/types/protocol";
 import { ConnectionStatus } from "@/src/lib/websocket-client";
+import { SessionModal } from "@/src/components/codex/SessionModal";
 
 interface ChatHeaderProps {
   currentThread: Thread | null;
@@ -25,7 +25,7 @@ interface ChatHeaderProps {
   onReconnect: () => void;
 }
 
-export const ChatHeader: React.FC<ChatHeaderProps> = ({
+export const ChatHeader: FC<ChatHeaderProps> = ({
   currentThread,
   models,
   selectedModel,
@@ -43,6 +43,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   onOpenSettings,
   onReconnect
 }) => {
+  const [showSessionModal, setShowSessionModal] = useState(false);
   const currentModelObj = models.find((m) => m.id === selectedModel || m.model === selectedModel);
 
   return (
@@ -50,7 +51,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
       <div className="flex items-center gap-3 min-w-0">
         <div className="flex flex-col min-w-0">
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-sm text-zinc-100 truncate max-w-[200px] sm:max-w-[340px]">
+            <span className="font-semibold text-sm text-zinc-100 truncate max-w-50 sm:max-w-85">
               {currentThread?.name || currentThread?.preview || "No Thread Selected"}
             </span>
             {isTurnInProgress && (
@@ -75,60 +76,26 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           </div>
         )}
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs border-zinc-800 bg-zinc-900/60">
-              <Cpu className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="hidden sm:inline">{currentModelObj?.displayName || selectedModel}</span>
-              <Badge variant="secondary" className="text-[9px] px-1 py-0">{selectedEffort}</Badge>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-64">
-            <DropdownMenuLabel>Codex Model</DropdownMenuLabel>
-            {models.length === 0 ? (
-              <DropdownMenuItem disabled>No models loaded</DropdownMenuItem>
-            ) : (
-              models.map((m) => (
-                <DropdownMenuItem key={m.id || m.model}
-                  onClick={() => onSelectModel(m.model || m.id)}
-                  className={selectedModel === (m.model || m.id) ? "bg-zinc-800 text-emerald-400 font-semibold" : ""}
-                >
-                  <div className="flex flex-col">
-                    <span>{m.displayName || m.model}</span>
-                    <span className="text-[10px] text-zinc-500">{m.model || m.id}</span>
-                  </div>
-                </DropdownMenuItem>
-              ))
-            )}
+        <Button variant="outline" size="sm" onClick={() => setShowSessionModal(true)}
+          className="h-8 gap-1.5 text-xs border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800/80 cursor-pointer"
+          title="Open Model Configuration"
+        >
+          <Cpu className="w-3.5 h-3.5 text-emerald-400" />
+          <span className="hidden sm:inline">{currentModelObj?.displayName || selectedModel}</span>
+          <Badge variant="secondary" className="text-[9px] px-1 py-0">{selectedEffort}</Badge>
+        </Button>
 
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel>Reasoning Effort</DropdownMenuLabel>
-            {["low", "medium", "high"].map((eff) => (
-              <DropdownMenuItem key={eff}
-                onClick={() => onSelectEffort(eff)}
-                className={selectedEffort === eff ? "bg-zinc-800 text-indigo-400 font-semibold capitalize" : "capitalize"}
-              >
-                {eff} Effort
-              </DropdownMenuItem>
-            ))}
-
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel>Approval Policy</DropdownMenuLabel>
-            {[
-              { id: "on-request" as AskForApproval, label: "On Request (Default)" },
-              { id: "untrusted" as AskForApproval, label: "Untrusted Only" },
-              { id: "never" as AskForApproval, label: "Never Ask (Dangerous)" }
-            ].map((pol) => (
-              <DropdownMenuItem
-                key={typeof pol.id === "string" ? pol.id : "granular"}
-                onClick={() => onSelectApprovalPolicy(pol.id)}
-                className={approvalPolicy === pol.id ? "bg-zinc-800 text-amber-400 font-semibold" : ""}
-              >
-                {pol.label}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <SessionModal
+          open={showSessionModal}
+          onOpenChange={setShowSessionModal}
+          models={models}
+          currentModel={selectedModel}
+          currentEffort={selectedEffort}
+          currentApprovalPolicy={approvalPolicy}
+          onSelectModel={onSelectModel}
+          onSelectEffort={onSelectEffort}
+          onSelectApprovalPolicy={onSelectApprovalPolicy}
+        />
 
         {isTurnInProgress ? (
           <Button size="sm" variant="destructive" onClick={onInterrupt}
@@ -139,8 +106,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           </Button>
         ) : null}
 
-        <Button size="sm" variant={showInspector ? "secondary" : "outline"}
-          onClick={onToggleInspector}
+        <Button size="sm" variant={showInspector ? "secondary" : "outline"} onClick={onToggleInspector}
           className="h-8 gap-1.5 text-xs border-zinc-800"
           title="JSON-RPC Protocol Inspector"
         >

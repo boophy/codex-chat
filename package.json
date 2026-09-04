@@ -5,6 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
+    "codex:bridge": "tsx scripts/codex-bridge.ts",
+    "go": "vite --host 0.0.0.0 --port 3000",
+    "dev:codex": "vite --host 0.0.0.0 --port 3000",
+    "codex:server": "./codex app-server --listen ws://127.0.0.1:8080",
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "start": "node dist/server.cjs",
     "preview": "vite preview",

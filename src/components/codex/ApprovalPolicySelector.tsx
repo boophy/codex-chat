@@ -1,60 +1,10 @@
-import { AskForApproval } from "@/src/types/protocol";
+import { ApprovalPolicySelectorProps,  POLICY_OPTIONS } from "@/src/types";
 import { ShieldCheck, Check } from "lucide-react";
 import { cn } from "@/src/lib/utils";
 import { FC } from "react";
 
-export interface ApprovalPolicySelectorProps {
-  approvalPolicy: AskForApproval;
-  onSelectApprovalPolicy: (policy: AskForApproval) => void;
-  variant?: "dropdown" | "form";
-  className?: string;
-}
-
+export type { ApprovalPolicySelectorProps };
 export { ApprovalSettings } from "./ApprovalSettings";
-
-interface PolicyOption {
-  id: AskForApproval;
-  key: string;
-  label: string;
-  badge: string;
-  desc: string;
-  colorClass: string;
-}
-
-const POLICY_OPTIONS: PolicyOption[] = [
-  {
-    id: "on-request",
-    key: "on-request",
-    label: "On Request (Default)",
-    badge: "Recommended",
-    desc: "Agent asks for confirmation when executing high-risk or external operations",
-    colorClass: "text-emerald-400"
-  },
-  {
-    id: "untrusted",
-    key: "untrusted",
-    label: "Untrusted Only",
-    badge: "Cautious",
-    desc: "Prompts whenever scripts or commands affect files outside current trusted repo",
-    colorClass: "text-blue-400"
-  },
-  {
-    id: "always" as AskForApproval,
-    key: "always",
-    label: "Always Ask",
-    badge: "Strict",
-    desc: "Every single tool call and command execution requires explicit approval",
-    colorClass: "text-amber-400"
-  },
-  {
-    id: "never",
-    key: "never",
-    label: "Never Ask",
-    badge: "Dangerous",
-    desc: "Autonomous execution without stopping for permission prompts",
-    colorClass: "text-rose-400"
-  }
-];
 
 export const ApprovalPolicySelector: FC<ApprovalPolicySelectorProps> = ({
   approvalPolicy,

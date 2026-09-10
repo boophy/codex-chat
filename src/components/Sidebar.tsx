@@ -1,51 +1,27 @@
-import { Plus, MessageSquare, GitBranch, Trash2, Zap, RefreshCw, Layers, Sliders, Server } from "lucide-react";
-import { FC, useState } from "react";
-import { Button } from "@/src/components/ui/button";
-import { ScrollArea } from "@/src/components/ui/scroll-area";
-import { Thread, GetAccountRateLimitsResponse, Model, AskForApproval } from "@/src/types/protocol";
-import { ConnectionStatus } from "@/src/lib/websocket-client";
-import { NewThreadModal } from "@/src/components/codex/NewThreadModal";
+import { Plus, MessageSquare, GitBranch, Trash2, Zap, RefreshCw, Layers, Sliders,  KeyRound, ShieldCheck } from "lucide-react";
 import { ServerManagerModal } from "@/src/components/codex/ServerManagerModal";
+import { ScrollArea } from "@/src/components/ui/scroll-area";
+import { Button } from "@/src/components/ui/button";
+import { SidebarProps } from "@/src/types";
+import { FC, useState } from "react";
 import { cn } from "@/src/lib/utils";
 
-interface SidebarProps {
-  threads: Thread[];
-  activeThreadId: string | null;
-  connectionStatus: ConnectionStatus;
-  rateLimits: GetAccountRateLimitsResponse | null;
-  models?: Model[];
-  selectedModel?: string;
-  selectedEffort?: string;
-  approvalPolicy?: AskForApproval;
-  onSelectThread: (threadId: string) => void;
-  onNewThread: (customParams?: any) => void | Promise<void>;
-  onOpenNewThreadPage?: () => void;
-  onForkThread: (threadId: string) => void;
-  onArchiveThread: (threadId: string) => void;
-  onDeleteThread: (threadId: string) => void;
-  onOpenSkillsApps: () => void;
-  onReconnect: () => void;
-}
-
+export type { SidebarProps };
 export const Sidebar: FC<SidebarProps> = ({
   threads,
   activeThreadId,
   connectionStatus,
   rateLimits,
-  models = [],
-  selectedModel = "gpt-5",
-  selectedEffort = "medium",
-  approvalPolicy = "on-request",
+  currentAccount,
   onSelectThread,
   onNewThread,
   onOpenNewThreadPage,
   onForkThread,
-  onArchiveThread,
   onDeleteThread,
   onOpenSkillsApps,
-  onReconnect
+  onReconnect,
+  onOpenLoginModal
 }) => {
-  const [newThreadModalOpen, setNewThreadModalOpen] = useState(false);
   const [serverModalOpen, setServerModalOpen] = useState(false);
 
   return (
@@ -57,7 +33,7 @@ export const Sidebar: FC<SidebarProps> = ({
               <Zap className="w-4 h-4 fill-emerald-400" />
             </div>
             <div>
-              <div className="font-bold text-sm text-zinc-100 tracking-tight">Codex App Server</div>
+              <div className="font-bold text-sm text-zinc-100 tracking-tight">Codex Chat</div>
               <div className="flex items-center gap-1.5 text-[11px] text-zinc-400">
                 <span className={cn(
                     "w-2 h-2 rounded-full inline-block",
@@ -77,7 +53,7 @@ export const Sidebar: FC<SidebarProps> = ({
               className="text-zinc-400 hover:text-indigo-400"
               title="Codex App-Server Process & Account Manager"
             >
-              <Server className="w-3.5 h-3.5" />
+              <Sliders className="w-3.5 h-3.5" />
             </Button>
             <Button size="xsIcon" variant="ghost" onClick={onReconnect}
               className="text-zinc-400 hover:text-zinc-100"
@@ -90,14 +66,7 @@ export const Sidebar: FC<SidebarProps> = ({
 
         <div className="p-3 border-b border-zinc-800/80 space-y-2">
           <div className="flex items-center gap-1.5">
-            <Button
-              onClick={() => {
-                if (onOpenNewThreadPage) {
-                  onOpenNewThreadPage();
-                } else {
-                  setNewThreadModalOpen(true);
-                }
-              }}
+            <Button onClick={ onOpenNewThreadPage }
               className="flex-1 justify-center gap-2 bg-zinc-100 text-zinc-900 hover:bg-zinc-200 font-semibold shadow-sm h-9 text-xs cursor-pointer"
             >
               <Plus className="w-4 h-4" />
@@ -144,7 +113,8 @@ export const Sidebar: FC<SidebarProps> = ({
                     <div className="flex items-center justify-between gap-1.5 mb-1">
                       <div className="flex items-center gap-2 min-w-0">
                         <MessageSquare
-                          className={cn("w-3.5 h-3.5 shrink-0",
+                          className={cn(
+                            "w-3.5 h-3.5 shrink-0",
                             isActive ? "text-emerald-400" : "text-zinc-500"
                           )}
                         />
@@ -213,29 +183,39 @@ export const Sidebar: FC<SidebarProps> = ({
           )}
 
           <div className="flex items-center justify-between px-1 text-[11px] text-zinc-400">
-            <button type="button" onClick={() => setServerModalOpen(true)}
-              className="flex items-center gap-1.5 hover:text-indigo-300 cursor-pointer"
+            <button type="button" onClick={onOpenLoginModal}
+              className={cn(
+                "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg border transition-all cursor-pointer text-left",
+                currentAccount?.isLoggedIn
+                  ? "border-emerald-900/50 bg-emerald-950/20 hover:bg-emerald-950/40 hover:border-emerald-800"
+                  : "border-amber-900/50 bg-amber-950/20 hover:bg-amber-950/40 hover:border-amber-800"
+              )}
+              title={currentAccount?.isLoggedIn ? "Account Authenticated - Click to manage" : "ChatGPT OAuth Not Authenticated - Click to Login"}
             >
-              <Server className="w-3 h-3 text-indigo-400" />
-              <span>Manage Servers</span>
+              <div className="flex items-center gap-2 min-w-0">
+                {currentAccount?.isLoggedIn ? (
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                ) : (
+                  <KeyRound className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                )}
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-mono">
+                    {currentAccount?.isLoggedIn ? "ChatGPT Auth" : "OAuth Status"}
+                  </span>
+                  <span className="text-xs font-semibold text-zinc-200 truncate">
+                    {currentAccount?.isLoggedIn
+                      ? currentAccount.account?.email || currentAccount.account?.planType || "Logged In"
+                      : "未登录 (点击登录)"}
+                  </span>
+                </div>
+              </div>
+              <span className={cn("text-[10px] font-medium shrink-0", currentAccount?.isLoggedIn ? "text-emerald-400" : "text-amber-400")}>
+                {currentAccount?.isLoggedIn ? "Active" : "Login →"}
+              </span>
             </button>
-            <span className="font-mono text-[10px] text-zinc-500">v2 / JSON-RPC</span>
           </div>
         </div>
       </aside>
-
-      <NewThreadModal
-        open={newThreadModalOpen}
-        onOpenChange={setNewThreadModalOpen}
-        models={models}
-        currentModel={selectedModel}
-        currentEffort={selectedEffort}
-        currentApprovalPolicy={approvalPolicy}
-        onStartThread={async (params) => {
-          await onNewThread(params);
-        }}
-      />
-      
       <ServerManagerModal open={serverModalOpen} onOpenChange={setServerModalOpen} />
     </>
   );

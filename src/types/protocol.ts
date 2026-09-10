@@ -6,13 +6,64 @@ export type ThreadId = string;
 export type ResponseItemId = string;
 export type GitSha = string;
 export type JsonValue = number | string | boolean | Array<JsonValue> | { [key in string]?: JsonValue } | null;
-export type AuthMode = "apikey" | "chatgpt" | "chatgptAuthTokens" | "headers" | "agentIdentity" | "personalAccessToken" | "bedrockApiKey" | "bedrockAccessKeys";
-export type PlanType = "free" | "go" | "plus" | "pro" | "prolite" | "team" | "self_serve_business_prolite" | "self_serve_business_usage_based" | "business" | "ent26" | "enterprise_cbp_automation" | "enterprise_cbp_usage_based" | "enterprise" | "edu" | "edu_plus" | "edu_pro" | "unknown";
+
+import type {
+  AuthMode,
+  PlanType,
+  TokenData,
+  AgentIdentityStorage,
+  BedrockApiKeyAuth,
+  BedrockAccessKeysAuth,
+  AuthDotJson,
+  AccountInfo,
+  AccountReadResponse,
+  AccountLoginStartParams,
+  AccountLoginStartResponse,
+  AccountLoginCompletedParams,
+  AccountUpdatedParams,
+  AccountLoginCancelParams
+} from "./auth";
+
+import type {
+  SandboxMode,
+  AskForApproval,
+  ApprovalsReviewer,
+  Personality,
+  Verbosity,
+  ReasoningEffort,
+  ReasoningSummary,
+  ReasoningEffortOption
+} from "./config";
+
+export type {
+  AuthMode,
+  PlanType,
+  TokenData,
+  AgentIdentityStorage,
+  BedrockApiKeyAuth,
+  BedrockAccessKeysAuth,
+  AuthDotJson,
+  AccountInfo,
+  AccountReadResponse,
+  AccountLoginStartParams,
+  AccountLoginStartResponse,
+  AccountLoginCompletedParams,
+  AccountUpdatedParams,
+  AccountLoginCancelParams
+};
+
+export type {
+  SandboxMode,
+  AskForApproval,
+  ApprovalsReviewer,
+  Personality,
+  Verbosity,
+  ReasoningEffort,
+  ReasoningSummary,
+  ReasoningEffortOption
+};
+
 export type MessagePhase = "commentary" | "final_answer";
-export type ReasoningEffort = string;
-export type ReasoningSummary = "auto" | "concise" | "detailed" | "none";
-export type Personality = "none" | "friendly" | "pragmatic";
-export type Verbosity = "low" | "medium" | "high";
 export type ModeKind = "plan" | "default";
 export type InputModality = "text" | "image" | "audio";
 export type MultiAgentVersion = "disabled" | "v1" | "v2";
@@ -22,10 +73,9 @@ export type ThreadHistoryMode = "legacy" | "paginated";
 export type SessionSource = "cli" | "vscode" | "exec" | "appServer" | { custom: string } | { subAgent: any } | "unknown";
 export type ThreadSource = string;
 export type ThreadSourceKind = "cli" | "vscode" | "exec" | "appServer" | "subAgent" | "subAgentReview" | "subAgentCompact" | "subAgentThreadSpawn" | "subAgentOther" | "unknown";
-export type AskForApproval = "untrusted" | "on-request" | { granular: { sandbox_approval: boolean; rules: boolean; skill_approval: boolean; request_permissions: boolean; mcp_elicitations: boolean } } | "never";
-export type ApprovalsReviewer = "user" | "auto_review" | "guardian_subagent";
-export type SandboxMode = "read-only" | "workspace-write" | "danger-full-access";
+
 export type NetworkAccess = "restricted" | "enabled";
+
 export type SandboxPolicy =
   | { type: "dangerFullAccess" }
   | { type: "readOnly"; networkAccess: boolean }
@@ -683,11 +733,6 @@ export type ThreadDeleteResponse = Record<string, never>;
 export interface ModelServiceTier {
   id: string;
   name: string;
-  description: string;
-}
-
-export interface ReasoningEffortOption {
-  reasoningEffort: ReasoningEffort;
   description: string;
 }
 

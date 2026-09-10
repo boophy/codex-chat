@@ -1,16 +1,12 @@
-import { X, ArrowDownLeft, ArrowUpRight, Search, Trash2, Copy, Check, Code2 } from "lucide-react";
-import { LogFrame } from "@/src/lib/websocket-client";
-import { Button } from "@/src/components/ui/button";
-import { Input } from "@/src/components/ui/input";
-import { Badge } from "@/src/components/ui/badge";
 import { FC, useState } from "react";
 import { cn } from "@/src/lib/utils";
+import { Input } from "@/src/components/ui/input";
+import { Badge } from "@/src/components/ui/badge";
+import { Button } from "@/src/components/ui/button";
+import { LogFrame, ProtocolInspectorProps } from "@/src/types";
+import { X, ArrowDownLeft, ArrowUpRight, Search, Trash2, Copy, Check, Code2 } from "lucide-react";
 
-interface ProtocolInspectorProps {
-  logs: LogFrame[];
-  onClear: () => void;
-  onClose: () => void;
-}
+export type { ProtocolInspectorProps };
 
 export const ProtocolInspector: FC<ProtocolInspectorProps> = ({
   logs,
@@ -28,6 +24,7 @@ export const ProtocolInspector: FC<ProtocolInspectorProps> = ({
     if (filterType === "notification" && log.type !== "notification") return false;
     if (filterType === "request" && log.type !== "request") return false;
     if (filterType === "response" && log.type !== "response") return false;
+
     if (search.trim()) {
       const q = search.toLowerCase();
       const matchMethod = log.method?.toLowerCase().includes(q);
@@ -54,9 +51,8 @@ export const ProtocolInspector: FC<ProtocolInspectorProps> = ({
         </div>
 
         <div className="flex items-center gap-1">
-          <Button size="xsIcon" variant="ghost" onClick={onClear}
+          <Button size="xsIcon" variant="ghost" onClick={onClear} title="Clear Frame Logs"
             className="text-zinc-400 hover:text-zinc-100"
-            title="Clear Frame Logs"
           >
             <Trash2 className="w-3.5 h-3.5" />
           </Button>
@@ -71,8 +67,7 @@ export const ProtocolInspector: FC<ProtocolInspectorProps> = ({
       <div className="p-2.5 border-b border-zinc-800/80 space-y-2">
         <div className="relative">
           <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-zinc-500" />
-          <Input value={search}
-            onChange={(e) => setSearch(e.target.value)}
+          <Input  value={search}  onChange={(e) => setSearch(e.target.value)}
             placeholder="Search methods, IDs, or payloads..."
             className="pl-8 h-8 text-xs bg-zinc-900 border-zinc-800"
           />

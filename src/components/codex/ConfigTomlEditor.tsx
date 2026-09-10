@@ -1,24 +1,11 @@
-import { ConfigToml, SandboxMode, WebSearchMode, ReasoningEffort, AutoCompactTokenLimitScope } from "@/server/types-config-toml";
+import { ConfigToml, SandboxMode, WebSearchMode, ReasoningEffort, AutoCompactTokenLimitScope, ConfigTomlEditorProps, JsonValueType, CustomKeyValueEntry } from "@/src/types";
 import { Sliders, RefreshCw, Code2, Plus, Trash2, Edit2, Check, Cpu, Layers, Shield, Bot, AlertCircle } from "lucide-react";
 import { useState, useEffect, FC, useMemo } from "react";
 import { wsClient } from "@/src/lib/websocket-client";
 import { Button } from "@/src/components/ui/button";
 import { cn } from "@/src/lib/utils";
 
-export interface ConfigTomlEditorProps {
-  config: Partial<ConfigToml>;
-  onChange: (updated: Partial<ConfigToml>) => void;
-  modelProvider?: string;
-  className?: string;
-}
-
-type JsonValueType = "string" | "number" | "boolean" | "json";
-
-interface CustomKeyValueEntry {
-  key: string;
-  type: JsonValueType;
-  value: any;
-}
+export type { ConfigTomlEditorProps, JsonValueType, CustomKeyValueEntry };
 
 // Known standard keys in ConfigToml to distinguish from custom dynamic key: JsonValue entries
 const STANDARD_CONFIG_KEYS = new Set([

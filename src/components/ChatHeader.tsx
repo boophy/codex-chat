@@ -1,31 +1,13 @@
-import { FC, useState } from "react";
+import { SessionModal } from "@/src/components/codex/SessionModal";
 import { Cpu, Coins, Square, Radio } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { Badge } from "@/src/components/ui/badge";
-import { Model, ThreadTokenUsage, Thread, AskForApproval } from "@/src/types/protocol";
-import { ConnectionStatus } from "@/src/lib/websocket-client";
-import { SessionModal } from "@/src/components/codex/SessionModal";
+import { ChatHeaderProps} from "@/src/types";
+import * as React from "react";
 
-interface ChatHeaderProps {
-  currentThread: Thread | null;
-  models: Model[];
-  selectedModel: string;
-  selectedEffort: string;
-  approvalPolicy: AskForApproval;
-  tokenUsage: ThreadTokenUsage | null;
-  isTurnInProgress: boolean;
-  connectionStatus: ConnectionStatus;
-  showInspector: boolean;
-  onSelectModel: (model: string) => void;
-  onSelectEffort: (effort: string) => void;
-  onSelectApprovalPolicy: (policy: AskForApproval) => void;
-  onInterrupt: () => void;
-  onToggleInspector: () => void;
-  onOpenSettings: () => void;
-  onReconnect: () => void;
-}
+export type { ChatHeaderProps };
 
-export const ChatHeader: FC<ChatHeaderProps> = ({
+export const ChatHeader: React.FC<ChatHeaderProps> = ({
   currentThread,
   models,
   selectedModel,
@@ -35,15 +17,19 @@ export const ChatHeader: FC<ChatHeaderProps> = ({
   isTurnInProgress,
   connectionStatus,
   showInspector,
+  currentProvider = "codex-aws",
+  currentAccount,
   onSelectModel,
   onSelectEffort,
   onSelectApprovalPolicy,
   onInterrupt,
   onToggleInspector,
   onOpenSettings,
-  onReconnect
+  onReconnect,
+  onOpenProviderModal,
+  onOpenLoginModal
 }) => {
-  const [showSessionModal, setShowSessionModal] = useState(false);
+  const [showSessionModal, setShowSessionModal] = React.useState(false);
   const currentModelObj = models.find((m) => m.id === selectedModel || m.model === selectedModel);
 
   return (
@@ -92,9 +78,13 @@ export const ChatHeader: FC<ChatHeaderProps> = ({
           currentModel={selectedModel}
           currentEffort={selectedEffort}
           currentApprovalPolicy={approvalPolicy}
+          currentProvider={currentProvider}
           onSelectModel={onSelectModel}
           onSelectEffort={onSelectEffort}
           onSelectApprovalPolicy={onSelectApprovalPolicy}
+          onSwitchProvider={(provider) => {
+            onOpenProviderModal?.(provider);
+          }}
         />
 
         {isTurnInProgress ? (

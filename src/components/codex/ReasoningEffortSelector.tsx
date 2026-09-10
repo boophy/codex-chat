@@ -1,22 +1,16 @@
 import { FC } from "react";
-import { Zap, Check } from "lucide-react";
 import { cn } from "@/src/lib/utils";
+import { Zap, Check } from "lucide-react";
+import { ReasoningEffortSelectorProps } from "@/src/types";
 
-export interface ReasoningEffortSelectorProps {
-  selectedEffort: string;
-  onSelectEffort: (effort: string) => void;
-  variant?: "dropdown" | "form" | "pill";
-  className?: string;
-}
-
-const EFFORT_OPTIONS = [
+export const EFFORT_OPTIONS = [
   { id: "none", label: "None", desc: "Standard generation without chain-of-thought" },
   { id: "low", label: "Low", desc: "Fast reasoning for lightweight tasks" },
   { id: "medium", label: "Medium", desc: "Balanced reasoning depth and speed (Default)" },
   { id: "high", label: "High", desc: "Thorough multi-step analysis for complex bugs" },
   { id: "xhigh", label: "Extra High", desc: "Maximum budget deliberation and exploration" }
 ];
-
+export type { ReasoningEffortSelectorProps };
 export const ReasoningEffortSelector: FC<ReasoningEffortSelectorProps> = ({
   selectedEffort,
   onSelectEffort,

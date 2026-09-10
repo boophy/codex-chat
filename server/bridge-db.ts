@@ -1,56 +1,14 @@
 import fs from "fs";
 import path from "path";
 import { DatabaseSync } from "node:sqlite";
+import { ServerRecord, ThreadConfigRecord, AuthSessionRecord, OperationLogRecord } from "../src/types";
 
-export interface ServerRecord {
-  id: string;
-  codex_home: string;
-  listen_port: number;
-  listen_addr: string;
-  pid: number | null;
-  status: "running" | "stopped" | "failed";
-  model_provider: string;
-  created_at: string;
-  updated_at: string;
-  last_log: string;
-}
-
-export interface ThreadConfigRecord {
-  id: string;
-  name: string;
-  model_provider: string;
-  model: string;
-  cwd: string;
-  approval_policy: string;
-  approvals_reviewer: string;
-  config_json: string;
-  service_name: string;
-  base_instructions: string;
-  developer_instructions: string;
-  personality: string;
-  ephemeral: number;
-  session_start_source: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface AuthSessionRecord {
-  id: string;
-  account_type: string;
-  codex_home: string;
-  status: "pending" | "completed" | "cancelled" | "failed" | "logged_out";
-  login_url: string;
-  account_info_json: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface OperationLogRecord {
-  id: number;
-  action: string;
-  details: string;
-  created_at: string;
-}
+export type {
+  ServerRecord,
+  ThreadConfigRecord,
+  AuthSessionRecord,
+  OperationLogRecord
+};
 
 class BridgeDatabase {
   private db: DatabaseSync;

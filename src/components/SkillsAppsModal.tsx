@@ -4,15 +4,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/src/components/ui/tabs";
 import { Button } from "@/src/components/ui/button";
 import { Badge } from "@/src/components/ui/badge";
-import { SkillMetadata, AppInfo } from "@/src/types/protocol";
+import { SkillsAppsModalProps } from "@/src/types";
 
-interface SkillsAppsModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  skills: SkillMetadata[];
-  apps: AppInfo[];
-  onSelectPrompt: (prompt: string) => void;
-}
+export type { SkillsAppsModalProps };
 
 export const SkillsAppsModal: FC<SkillsAppsModalProps> = ({
   open,

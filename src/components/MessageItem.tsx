@@ -1,14 +1,10 @@
 import { Terminal, FileCode, BrainCircuit, Bot, User, Copy, Check, ChevronDown, ChevronRight, ListTodo, Wrench } from "lucide-react";
-import { FC, useState } from "react";
 import { Badge } from "@/src/components/ui/badge";
-import { ThreadItem } from "@/src/types/protocol";
+import {  MessageItemProps } from "@/src/types";
 import { cn } from "@/src/lib/utils";
+import { FC, useState } from "react";
 
-interface MessageItemProps {
-  item: ThreadItem;
-  isStreaming?: boolean;
-}
-
+export type { MessageItemProps };
 export const MessageItem: FC<MessageItemProps> = ({ item, isStreaming }) => {
   const [copied, setCopied] = useState(false);
   const [showReasoning, setShowReasoning] = useState(true);
@@ -105,8 +101,7 @@ export const MessageItem: FC<MessageItemProps> = ({ item, isStreaming }) => {
               <span className="text-zinc-400 text-[11px]">Command Execution</span>
             </div>
             <div className="flex items-center gap-2">
-              <Badge
-                variant={
+              <Badge variant={
                   item.status === "completed"
                     ? "success"
                     : item.status === "failed" || item.status === "declined"
@@ -117,9 +112,8 @@ export const MessageItem: FC<MessageItemProps> = ({ item, isStreaming }) => {
               >
                 {item.status}
               </Badge>
-              <button type="button" onClick={() => handleCopy(item.command)}
+              <button type="button" onClick={() => handleCopy(item.command)}  title="Copy command"
                 className="text-zinc-500 hover:text-zinc-300 transition-colors p-1"
-                title="Copy command"
               >
                 {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
               </button>
@@ -245,8 +239,7 @@ export const MessageItem: FC<MessageItemProps> = ({ item, isStreaming }) => {
             </div>
             <div className="flex items-center justify-between px-1">
               <span className="text-[10px] text-zinc-500">Codex Agent</span>
-              <button type="button"
-                onClick={() => handleCopy(item.text)}
+              <button type="button" onClick={() => handleCopy(item.text)}
                 className="text-zinc-500 hover:text-zinc-300 transition-colors p-1 flex items-center gap-1 text-[10px]"
               >
                 {copied ? (

@@ -1,37 +1,16 @@
 import fs from "fs";
 import path from "path";
 import os from "os";
-import { spawn, ChildProcess } from "child_process";
+import { spawn } from "child_process";
 import { WebSocket } from "ws";
-import { bridgeDb, ServerRecord } from "./bridge-db";
-import { ConfigToml } from "./types-config-toml";
+import { bridgeDb } from "./bridge-db";
+import { ServerRecord, ConfigToml, ManagedServerInstance, StartServerOptions, EnsureThreadServerParams } from "../src/types";
 
-export interface ManagedServerInstance {
-  id: string;
-  codexHome: string;
-  listenPort: number;
-  listenAddr: string;
-  modelProvider: string;
-  process: ChildProcess | null;
-  pid: number | null;
-  status: "running" | "stopped" | "failed";
-  createdAt: string;
-  updatedAt: string;
-  logs: string[];
-}
-
-export interface StartServerOptions {
-  codexHome?: string;
-  listenPort?: number;
-  modelProvider?: string;
-  forceRestart?: boolean;
-}
-
-export interface EnsureThreadServerParams {
-  modelProvider?: string | null;
-  codexHome?: string | null;
-  model?: string | null;
-}
+export type {
+  ManagedServerInstance,
+  StartServerOptions,
+  EnsureThreadServerParams
+};
 
 export function resolveCodexHome(inputPath?: string | null, fallbackProvider?: string | null): string {
   if (inputPath && inputPath.trim()) {
@@ -90,22 +69,27 @@ class BridgeManager {
   }
 
   private findCodexBinary(): string | null {
+    const bin = ['codex','cdx','codex-app-server','cds']
     const candidates = [
-      path.resolve(process.cwd(), "codex"),
-      path.resolve(process.cwd(), "target", "debug", "codex"),
-      path.resolve(process.cwd(), "target", "release", "codex"),
-      path.resolve(os.homedir(), ".cargo", "bin", "codex"),
-      "/usr/local/bin/codex",
-      "/usr/bin/codex"
+      path.resolve(process.cwd()),
+      path.resolve(process.cwd(), "target", "debug"),
+      path.resolve(process.cwd(), "target", "release"),
+      path.resolve(os.homedir(), ".cargo", "bin"),
+      path.resolve(os.homedir(), "prj"),
+      "/usr/local/bin",
+      "/usr/bin"
     ];
 
     for (const c of candidates) {
-      if (fs.existsSync(c)) {
-        try {
-          fs.accessSync(c, fs.constants.X_OK);
-          return c;
-        } catch {
-          // not executable
+      for (const b of bin) {
+        const fullPath = path.join(c, b);
+        if (fs.existsSync(fullPath) && fs.statSync(fullPath).isFile()) {
+          try {
+            fs.accessSync(fullPath, fs.constants.X_OK);
+            return fullPath;
+          } catch {
+            // not executable
+          }
         }
       }
     }

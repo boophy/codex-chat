@@ -1,21 +1,12 @@
-import { ChangeEvent, FC, useRef, useState } from "react";
-import { Send, Navigation2 } from "lucide-react";
+import * as React from "react";
+import { Send,Navigation2} from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { Textarea } from "@/src/components/ui/textarea";
 import { Badge } from "@/src/components/ui/badge";
-import { SkillMetadata, AppInfo } from "@/src/types/protocol";
+import { ChatInputProps } from "@/src/types";
 
-interface ChatInputProps {
-  onSendMessage: (text: string, skills: string[], mentions: string[]) => void;
-  onSteerTurn: (text: string) => void;
-  onInterrupt: () => void;
-  isTurnInProgress: boolean;
-  skills: SkillMetadata[];
-  apps: AppInfo[];
-  disabled?: boolean;
-}
-
-export const ChatInput: FC<ChatInputProps> = ({
+export type { ChatInputProps };
+export const ChatInput: React.FC<ChatInputProps> = ({
   onSendMessage,
   onSteerTurn,
   onInterrupt,
@@ -24,21 +15,21 @@ export const ChatInput: FC<ChatInputProps> = ({
   apps,
   disabled
 }) => {
-  const [text, setText] = useState("");
-  const [attachedSkills, setAttachedSkills] = useState<string[]>([]);
-  const [attachedMentions, setAttachedMentions] = useState<string[]>([]);
-  const [showMentionMenu, setShowMentionMenu] = useState(false);
-  const [mentionType, setMentionType] = useState<"skill" | "app">("skill");
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [text, setText] = React.useState("");
+  const [attachedSkills, setAttachedSkills] = React.useState<string[]>([]);
+  const [attachedMentions, setAttachedMentions] = React.useState<string[]>([]);
+  const [showMentionMenu, setShowMentionMenu] = React.useState(false);
+  const [mentionType, setMentionType] = React.useState<"skill" | "app">("skill");
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
     }
   };
 
-  const handleTextChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
     setText(val);
 
@@ -97,8 +88,7 @@ export const ChatInput: FC<ChatInputProps> = ({
         <div className="absolute bottom-full left-4 mb-2 w-72 bg-zinc-900 border border-zinc-700 rounded-xl p-2 shadow-2xl z-20 animate-in fade-in zoom-in-95">
           <div className="text-[11px] font-semibold text-zinc-400 px-2 py-1 flex items-center justify-between border-b border-zinc-800 mb-1">
             <span>{mentionType === "skill" ? "Insert Skill ($)" : "Insert Connected App (@)"}</span>
-            <button type="button"
-              onClick={() => setShowMentionMenu(false)}
+            <button type="button" onClick={() => setShowMentionMenu(false)}
               className="text-zinc-500 hover:text-zinc-300"
             >
               Esc
@@ -152,7 +142,7 @@ export const ChatInput: FC<ChatInputProps> = ({
                 </Badge>
               </button>
             ))}
-            {attachedMentions.map((m) => (
+            {attachedMentions.map((m) => ( 
               <button key={m} type="button" title="Click to remove"
                 onClick={() => setAttachedMentions(attachedMentions.filter((x) => x !== m))}
               >
@@ -207,8 +197,7 @@ export const ChatInput: FC<ChatInputProps> = ({
                 <span>Steer</span>
               </Button>
             ) : (
-              <Button size="xsIcon" variant="accent" onClick={handleSubmit} 
-                disabled={!text.trim() || disabled}
+              <Button size="xsIcon" variant="accent" onClick={handleSubmit} disabled={!text.trim() || disabled}
                 className="w-8 h-8 rounded-xl shadow-xs"
               >
                 <Send className="w-4 h-4" />

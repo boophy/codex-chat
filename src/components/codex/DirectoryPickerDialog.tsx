@@ -1,27 +1,11 @@
 import { Folder, FolderPlus, FolderOpen, ArrowUp, RefreshCw, Home, HardDrive, Check, ChevronRight, Eye, EyeOff, Search, AlertCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/src/components/ui/dialog";
+import { DirectoryPickerDialogProps, DirEntry, RootEntry} from "@/src/types";
 import { FC, Fragment, useEffect, useMemo, useState } from "react";
 import { Button } from "@/src/components/ui/button";
 import { cn } from "@/src/lib/utils";
 
-export interface DirectoryPickerDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  initialPath?: string;
-  onSelectPath: (selectedPath: string) => void;
-}
-
-interface DirEntry {
-  name: string;
-  path: string;
-  isHidden: boolean;
-  mtime?: string;
-}
-
-interface RootEntry {
-  name: string;
-  path: string;
-}
+export type { DirectoryPickerDialogProps, DirEntry, RootEntry };
 
 export const DirectoryPickerDialog: FC<DirectoryPickerDialogProps> = ({ open, onOpenChange, initialPath, onSelectPath }) => {
   const [currentPath, setCurrentPath] = useState<string>(initialPath || "");

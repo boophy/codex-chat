@@ -1,22 +1,13 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter} from "@/src/components/ui/dialog";
+import { FC, useEffect, useState, } from "react";
 import { Settings, Activity, RefreshCw, CheckCircle2, XCircle, Terminal } from "lucide-react";
-import { ServerDiagnosticsResponse } from "@/src/types/protocol";
-import { ConnectionStatus } from "@/src/lib/websocket-client";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/src/components/ui/dialog";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Switch } from "@/src/components/ui/switch";
 import { Badge } from "@/src/components/ui/badge";
-import { FC, useEffect, useState } from "react";
+import { SettingsModalProps } from "@/src/types";
 
-interface SettingsModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  currentWsUrl: string;
-  connectionStatus: ConnectionStatus;
-  diagnostics: ServerDiagnosticsResponse | null;
-  onSaveWsUrl: (url: string) => void;
-  onFetchDiagnostics: () => void;
-}
+export type { SettingsModalProps };
 
 export const SettingsModal: FC<SettingsModalProps> = ({
   open,
@@ -118,18 +109,6 @@ export const SettingsModal: FC<SettingsModalProps> = ({
                 ws://127.0.0.1:8080 (Direct)
               </button>
             </div>
-{/* 
-            <div className="p-2.5 rounded bg-amber-950/30 border border-amber-800/40 text-[10px] space-y-1 text-amber-300/90">
-              <div className="font-semibold text-amber-200 flex items-center gap-1">
-                <span>⚠️ Why direct ws://127.0.0.1:8080 returns 403:</span>
-              </div>
-              <p className="text-zinc-300 leading-relaxed">
-                Codex app-server restricts browser handshakes and rejects any connection with an <code className="text-amber-300 font-mono">Origin</code> header (HTTP 403). Web browsers forcibly attach this header.
-              </p>
-              <p className="text-zinc-300 leading-relaxed">
-                👉 <strong>Solution:</strong> Set URL to <code className="text-indigo-300 font-mono font-bold">/ws</code> (Vite/Express strips the Origin header), or run <code className="text-indigo-300 font-mono">npm run codex:bridge</code> and connect to <code className="text-indigo-300 font-mono">ws://127.0.0.1:8081</code>.
-              </p>
-            </div> */}
           </div>
 
           <div className="p-3 rounded-lg border border-zinc-800 bg-zinc-950/80 space-y-2">
@@ -215,11 +194,7 @@ export const SettingsModal: FC<SettingsModalProps> = ({
               </div>
               <div className="flex justify-between text-zinc-300">
                 <span>Memory (RSS):</span>
-                <span>
-                  {diagnostics.process.residentMemoryBytes != null
-                    ? `${(diagnostics.process.residentMemoryBytes / (1024 * 1024)).toFixed(1)} MB`
-                    : "N/A"}
-                </span>
+                <span>{(diagnostics.process.residentMemoryBytes / (1024 * 1024)).toFixed(1)} MB</span>
               </div>
               {diagnostics.gauges?.map((g, idx) => (
                 <div key={idx} className="flex justify-between text-zinc-400">
@@ -243,3 +218,4 @@ export const SettingsModal: FC<SettingsModalProps> = ({
     </Dialog>
   );
 };
+

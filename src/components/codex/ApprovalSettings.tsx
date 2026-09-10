@@ -1,92 +1,9 @@
+import {  ApprovalSettingsProps, POLICY_OPTIONS, REVIEWER_OPTIONS } from "@/src/types";
 import { ShieldCheck, UserCheck, Check, ChevronsUpDown } from "lucide-react";
-import { AskForApproval, ApprovalsReviewer } from "@/src/types/protocol";
 import { useEffect, useRef, useState, FC } from "react";
 import { cn } from "@/src/lib/utils";
 
-export interface ApprovalSettingsProps {
-  approvalPolicy: AskForApproval;
-  approvalsReviewer: ApprovalsReviewer;
-  onSelectApprovalPolicy: (policy: AskForApproval) => void;
-  onSelectApprovalsReviewer: (reviewer: ApprovalsReviewer) => void;
-  className?: string;
-  disabled?: boolean;
-}
-
-interface PolicyOption {
-  id: AskForApproval;
-  key: string;
-  label: string;
-  badge: string;
-  badgeClass: string;
-  desc: string;
-}
-
-interface ReviewerOption {
-  id: ApprovalsReviewer;
-  label: string;
-  badge: string;
-  badgeClass: string;
-  desc: string;
-}
-
-const POLICY_OPTIONS: PolicyOption[] = [
-  {
-    id: "on-request",
-    key: "on-request",
-    label: "On Request (Default)",
-    badge: "Recommended",
-    badgeClass: "text-emerald-400 bg-emerald-950/60 border-emerald-800/50",
-    desc: "Asks confirmation before executing high-risk or external operations"
-  },
-  {
-    id: "untrusted",
-    key: "untrusted",
-    label: "Untrusted Only",
-    badge: "Cautious",
-    badgeClass: "text-blue-400 bg-blue-950/60 border-blue-800/50",
-    desc: "Prompts whenever affecting files outside current workspace"
-  },
-  {
-    id: "always" as AskForApproval,
-    key: "always",
-    label: "Always Ask",
-    badge: "Strict",
-    badgeClass: "text-amber-400 bg-amber-950/60 border-amber-800/50",
-    desc: "Every single tool call and command requires explicit approval"
-  },
-  {
-    id: "never",
-    key: "never",
-    label: "Never Ask",
-    badge: "Dangerous",
-    badgeClass: "text-rose-400 bg-rose-950/60 border-rose-800/50",
-    desc: "Autonomous execution without stopping for permission prompts"
-  }
-];
-
-const REVIEWER_OPTIONS: ReviewerOption[] = [
-  {
-    id: "user",
-    label: "user",
-    badge: "Interactive UI",
-    badgeClass: "text-purple-400 bg-purple-950/60 border-purple-800/50",
-    desc: "Interactive banners & human confirmation in chat"
-  },
-  {
-    id: "auto_review",
-    label: "auto_review",
-    badge: "Automated Rules",
-    badgeClass: "text-blue-400 bg-blue-950/60 border-blue-800/50",
-    desc: "Automated evaluation against configured security rules"
-  },
-  {
-    id: "guardian_subagent",
-    label: "guardian_subagent",
-    badge: "AI Guardian",
-    badgeClass: "text-indigo-400 bg-indigo-950/60 border-indigo-800/50",
-    desc: "Dedicated AI guardian subagent audits safety"
-  }
-];
+export type { ApprovalSettingsProps };
 
 export const ApprovalSettings: FC<ApprovalSettingsProps> = ({
   approvalPolicy,

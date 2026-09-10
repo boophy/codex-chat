@@ -1,0 +1,25 @@
+GET http://127.0.0.1:3000/readyz
+###
+GET http://127.0.0.1:3000/healthz
+###
+GET http://127.0.0.1:3000/api/health
+###
+GET http://127.0.0.1:3000/api/codex/servers
+###
+POST http://127.0.0.1:3000/api/codex/servers/start
+Content-Type: application/json
+
+{
+    "codexHome":"custom",
+    "modelProvider":"hello",
+    "listenPort":8090,
+    "forceRestart":true
+}
+###
+GET http://127.0.0.1:3000/api/codex/servers/server-shengsuanyun-8080
+###
+GET http://127.0.0.1:3000/api/codex/config/read
+###
+POST http://127.0.0.1:3000/api/codex/servers/server-codex-aws-8080/stop
+Content-Type: application/json
+###

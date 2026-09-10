@@ -1,16 +1,19 @@
-import { Thread, Turn, ThreadItem, Model, SkillMetadata, AppInfo, GetAccountRateLimitsResponse, ServerDiagnosticsResponse, ThreadTokenUsage, CommandExecutionRequestApprovalParams, FileChangeRequestApprovalParams, AskForApproval, ReasoningEffort, UserInput } from "@/src/types/protocol";
-import { wsClient, ConnectionStatus, LogFrame } from "@/src/lib/websocket-client";
+import { Thread, ThreadItem, Model, SkillMetadata, AppInfo, GetAccountRateLimitsResponse, ServerDiagnosticsResponse, ThreadTokenUsage, CommandExecutionRequestApprovalParams, FileChangeRequestApprovalParams, AskForApproval, ReasoningEffort, UserInput, ConnectionStatus, LogFrame, AccountStatusResult } from "@/src/types";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ProtocolInspector } from "@/src/components/ProtocolInspector";
 import { NewThreadPage } from "@/src/components/codex/NewThreadPage";
+import { ModelSelector } from "@/src/components/codex/ModelSelector";
 import { SkillsAppsModal } from "@/src/components/SkillsAppsModal";
 import { ApprovalBanner } from "@/src/components/ApprovalBanner";
 import { Bot, Sparkles, Terminal, Sliders } from "lucide-react";
+import { LoginModal } from "@/src/components/codex/LoginModal";
 import { SettingsModal } from "@/src/components/SettingsModal";
 import { ScrollArea } from "@/src/components/ui/scroll-area";
 import { MessageItem } from "@/src/components/MessageItem";
 import { ChatHeader } from "@/src/components/ChatHeader";
+import { CodexAuthClient } from "@/src/lib/auth-client";
 import { ChatInput } from "@/src/components/ChatInput";
+import { wsClient } from "@/src/lib/websocket-client";
 import { Sidebar } from "@/src/components/Sidebar";
 
 export default function App() {
@@ -24,6 +27,8 @@ export default function App() {
   const [apps, setApps] = useState<AppInfo[]>([]);
   const [rateLimits, setRateLimits] = useState<GetAccountRateLimitsResponse | null>(null);
   const [diagnostics, setDiagnostics] = useState<ServerDiagnosticsResponse | null>(null);
+  const [currentAccount, setCurrentAccount] = useState<AccountStatusResult | null>(null);
+  const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
   const [selectedModel, setSelectedModel] = useState("gpt-5.4-codex");
   const [selectedEffort, setSelectedEffort] = useState<ReasoningEffort>("medium");
   const [approvalPolicy, setApprovalPolicy] = useState<AskForApproval>("on-request");
@@ -40,6 +45,25 @@ export default function App() {
   const [logs, setLogs] = useState<LogFrame[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const [currentProvider, setCurrentProvider] = useState<string>(() => {
+    try {
+      const cached = localStorage.getItem("codex_thread_config_v2");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed.modelProvider) return parsed.modelProvider;
+      }
+    } catch {}
+    return "shengsuanyun";
+  });
+  const hasInitialLoginPrompted = useRef<boolean>(false);
+  const [showProviderSwitchModal, setShowProviderSwitchModal] = useState<boolean>(false);
+  const [targetSwitchProvider, setTargetSwitchProvider] = useState<string | undefined>(undefined);
+
+  const handleOpenProviderModal = (providerToSwitch?: string) => {
+    setTargetSwitchProvider(providerToSwitch);
+    setShowProviderSwitchModal(true);
+  };
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -55,13 +79,14 @@ export default function App() {
 
   const fetchInitialData = async () => {
     try {
-      const [threadListRes, modelListRes, skillsListRes, appsListRes, rateLimitsRes] =
+      const [threadListRes, modelListRes, skillsListRes, appsListRes, rateLimitsRes, accountStatusRes] =
         await Promise.allSettled([
           wsClient.request("thread/list", {}),
           wsClient.request("model/list", {}),
           wsClient.request("skills/list", {}),
           wsClient.request("app/list", {}),
-          wsClient.request("account/rateLimits/read", {})
+          wsClient.request("account/rateLimits/read", {}),
+          CodexAuthClient.checkAccountStatus(wsClient)
         ]);
 
       if (threadListRes.status === "fulfilled" && threadListRes.value?.data) {
@@ -92,6 +117,21 @@ export default function App() {
 
       if (rateLimitsRes.status === "fulfilled" && rateLimitsRes.value) {
         setRateLimits(rateLimitsRes.value);
+      }
+
+      if (accountStatusRes.status === "fulfilled" && accountStatusRes.value) {
+        setCurrentAccount(accountStatusRes.value);
+        if (accountStatusRes.value.providerId) {
+          setCurrentProvider(accountStatusRes.value.providerId);
+        }
+        // If not logged in on initial load, prompt login window
+        if (!accountStatusRes.value.isLoggedIn && !hasInitialLoginPrompted.current) {
+          hasInitialLoginPrompted.current = true;
+          setShowLoginModal(true);
+        }
+      } else if (!hasInitialLoginPrompted.current) {
+        hasInitialLoginPrompted.current = true;
+        setShowLoginModal(true);
       }
     } catch (e) {
       console.error(e);
@@ -304,6 +344,32 @@ export default function App() {
       }
     );
 
+    const unsubAccountUpdated = wsClient.on("account/updated", (params) => {
+      if (params?.account) {
+        setCurrentAccount({
+          isLoggedIn: true,
+          account: params.account,
+          requiresOpenaiAuth: false,
+          authMode: params.authMode || "chatgpt"
+        });
+      } else if (params?.authMode === null) {
+        setCurrentAccount({
+          isLoggedIn: false,
+          account: null,
+          requiresOpenaiAuth: true,
+          authMode: null
+        });
+      }
+    });
+
+    const unsubAccountCompleted = wsClient.on("account/login/completed", (params) => {
+      if (params?.success) {
+        CodexAuthClient.checkAccountStatus(wsClient).then((res) => {
+          setCurrentAccount(res);
+        }).catch(() => {});
+      }
+    });
+
     connectAndInitialize();
 
     return () => {
@@ -321,6 +387,8 @@ export default function App() {
       unsubTokenUsage();
       unsubCommandApprovalReq();
       unsubFileApprovalReq();
+      unsubAccountUpdated();
+      unsubAccountCompleted();
     };
   }, [connectAndInitialize]);
 
@@ -331,6 +399,24 @@ export default function App() {
       const res = await wsClient.request("thread/read", { threadId, includeTurns: true });
       if (res?.thread) {
         setCurrentThread(res.thread);
+        const threadProvider = res.thread.modelProvider;
+        if (threadProvider && threadProvider !== currentProvider) {
+          try {
+            await wsClient.request("server/restart", {
+              modelProvider: threadProvider,
+              codexHome: `~/.codex-${threadProvider}`,
+              forceRestart: true
+            });
+            setCurrentProvider(threadProvider);
+            const authStatus = await CodexAuthClient.checkAccountStatus(wsClient);
+            setCurrentAccount(authStatus);
+            if (!authStatus.isLoggedIn) {
+              setShowLoginModal(true);
+            }
+          } catch (e) {
+            console.warn("Failed to switch app-server for thread provider:", e);
+          }
+        }
         if (res.thread.modelProvider) {
           const matched = models.find((m) => m.modelProvider === res.thread.modelProvider);
           if (matched) setSelectedModel(matched.model);
@@ -343,8 +429,31 @@ export default function App() {
 
   const handleNewThread = async (customParams?: any) => {
     try {
+      const targetProv = customParams?.modelProvider || currentProvider;
+      if (targetProv !== currentProvider) {
+        await wsClient.request("server/restart", {
+          modelProvider: targetProv,
+          codexHome: `~/.codex-${targetProv}`,
+          forceRestart: true
+        });
+        setCurrentProvider(targetProv);
+        const authStatus = await CodexAuthClient.checkAccountStatus(wsClient);
+        setCurrentAccount(authStatus);
+        if (!authStatus.isLoggedIn) {
+          setShowLoginModal(true);
+          return;
+        }
+      } else {
+        const authStatus = await CodexAuthClient.checkAccountStatus(wsClient);
+        if (!authStatus.isLoggedIn) {
+          setShowLoginModal(true);
+          return;
+        }
+      }
+
       const payload: any = {
         model: selectedModel,
+        modelProvider: targetProv,
         approvalPolicy,
         ...(customParams || {})
       };
@@ -372,24 +481,6 @@ export default function App() {
         setThreads((prev) => [res.thread, ...prev]);
         setActiveThreadId(res.thread.id);
         setCurrentThread(res.thread);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleArchiveThread = async (threadId: string) => {
-    try {
-      await wsClient.request("thread/archive", { threadId });
-      setThreads((prev) => prev.filter((t) => t.id !== threadId));
-      if (activeThreadId === threadId) {
-        const remaining = threads.filter((t) => t.id !== threadId);
-        if (remaining.length > 0) {
-          selectThread(remaining[0].id);
-        } else {
-          setActiveThreadId(null);
-          setCurrentThread(null);
-        }
       }
     } catch (err) {
       console.error(err);
@@ -522,14 +613,16 @@ export default function App() {
         selectedModel={selectedModel}
         selectedEffort={selectedEffort}
         approvalPolicy={approvalPolicy}
+        currentProvider={currentProvider}
+        currentAccount={currentAccount}
         onSelectThread={selectThread}
         onNewThread={handleNewThread}
         onOpenNewThreadPage={() => setCurrentView("new-thread")}
         onForkThread={handleForkThread}
-        onArchiveThread={handleArchiveThread}
         onDeleteThread={handleDeleteThread}
         onOpenSkillsApps={() => setShowSkillsApps(true)}
         onReconnect={connectAndInitialize}
+        onOpenLoginModal={() => setShowLoginModal(true)}
       />
 
       {currentView === "new-thread" ? (
@@ -538,11 +631,13 @@ export default function App() {
           currentModel={selectedModel}
           currentEffort={selectedEffort}
           currentApprovalPolicy={approvalPolicy}
+          currentProvider={currentProvider}
           onBack={() => setCurrentView("chat")}
           onStartThread={async (params) => {
             await handleNewThread(params);
             setCurrentView("chat");
           }}
+          onOpenProviderModal={handleOpenProviderModal}
         />
       ) : (
         <main className="flex-1 flex flex-col min-w-0 h-full relative bg-zinc-950">
@@ -556,6 +651,8 @@ export default function App() {
             isTurnInProgress={isTurnInProgress}
             connectionStatus={connectionStatus}
             showInspector={showInspector}
+            currentProvider={currentProvider}
+            currentAccount={currentAccount}
             onSelectModel={setSelectedModel}
             onSelectEffort={(eff) => setSelectedEffort(eff as ReasoningEffort)}
             onSelectApprovalPolicy={setApprovalPolicy}
@@ -563,6 +660,8 @@ export default function App() {
             onToggleInspector={() => setShowInspector(!showInspector)}
             onOpenSettings={() => setShowSettings(true)}
             onReconnect={connectAndInitialize}
+            onOpenProviderModal={handleOpenProviderModal}
+            onOpenLoginModal={() => setShowLoginModal(true)}
           />
 
           <div className="flex-1 flex min-h-0 relative">
@@ -663,6 +762,53 @@ export default function App() {
         skills={skills}
         apps={apps}
         onSelectPrompt={(p) => { handleSendMessage(p, [], []);}}
+      />
+
+      <ModelSelector
+        open={showProviderSwitchModal}
+        onOpenChange={setShowProviderSwitchModal}
+        targetProvider={targetSwitchProvider}
+        currentProvider={currentProvider}
+        models={models}
+        selectedModel={selectedModel}
+        onSelectModel={setSelectedModel}
+        currentThread={currentThread}
+        onProviderSwitched={(newProvider) => {
+          setCurrentProvider(newProvider);
+          try {
+            const cached = localStorage.getItem("codex_thread_config_v2");
+            const data = cached ? JSON.parse(cached) : {};
+            localStorage.setItem("codex_thread_config_v2", JSON.stringify({ ...data, modelProvider: newProvider }));
+          } catch {}
+        }}
+        onThreadRestored={(restoredThread) => {
+          setCurrentThread(restoredThread);
+          setActiveThreadId(restoredThread.id);
+        }}
+        onRefreshData={fetchInitialData}
+        onOpenLoginModal={(prov) => {
+          if (prov) setCurrentProvider(prov);
+          setShowLoginModal(true);
+        }}
+      />
+
+      <LoginModal
+        open={showLoginModal}
+        onOpenChange={setShowLoginModal}
+        currentProvider={currentProvider}
+        onProviderChange={async (newProvider) => {
+          setCurrentProvider(newProvider);
+          try {
+            const cached = localStorage.getItem("codex_thread_config_v2");
+            const data = cached ? JSON.parse(cached) : {};
+            localStorage.setItem("codex_thread_config_v2", JSON.stringify({ ...data, modelProvider: newProvider }));
+          } catch {}
+          await fetchInitialData();
+        }}
+        onLoginSuccess={() => {
+          CodexAuthClient.checkAccountStatus(wsClient).then(setCurrentAccount).catch(() => {});
+          fetchInitialData();
+        }}
       />
     </div>
   );

@@ -1,6 +1,5 @@
 import { ArrowLeft, Play, FolderOpen, FileText, Sparkles, Layers, Settings, ShieldCheck, Cpu, Info, CheckCircle2, AlertCircle, RotateCcw } from "lucide-react";
-import { Model, AskForApproval, ApprovalsReviewer } from "@/src/types/protocol";
-import { ConfigToml, Personality } from "@/server/types-config-toml";
+import { AskForApproval, ApprovalsReviewer, ConfigToml, Personality, SessionStartSource, NewThreadPageProps } from "@/src/types";
 import { ReasoningEffortSelector } from "./ReasoningEffortSelector";
 import { DirectoryPickerDialog } from "./DirectoryPickerDialog";
 import { ApprovalSettings } from "./ApprovalSettings";
@@ -10,21 +9,21 @@ import { ModelSelector } from "./ModelSelector";
 import { FC, useEffect, useState } from "react";
 import { cn } from "@/src/lib/utils";
 
-export type SessionStartSource = "startup" | "clear";
-
-export interface NewThreadPageProps {
-  models: Model[];
-  currentModel: string;
-  currentEffort: string;
-  currentApprovalPolicy: AskForApproval;
-  onBack: () => void;
-  onStartThread: (params: any) => Promise<void> | void;
-}
+export type { SessionStartSource, NewThreadPageProps };
 
 const LOCAL_STORAGE_KEY = "codex_thread_config_v2";
 
-export const NewThreadPage: FC<NewThreadPageProps> = ({ models, currentModel, currentEffort, currentApprovalPolicy, onBack, onStartThread}) => {
-  const [modelProvider, setModelProvider] = useState<string>("codex-aws");
+export const NewThreadPage: FC<NewThreadPageProps> = ({
+  models,
+  currentModel,
+  currentEffort,
+  currentApprovalPolicy,
+  currentProvider = "codex-aws",
+  onBack,
+  onStartThread,
+  onOpenProviderModal
+}) => {
+  const [modelProvider, setModelProvider] = useState<string>(currentProvider || "codex-aws");
   const [model, setModel] = useState<string>(currentModel || "gpt-5");
   const [reasoningEffort, setReasoningEffort] = useState<string>(currentEffort || "medium");
   const [cwd, setCwd] = useState<string>("");
@@ -90,6 +89,10 @@ export const NewThreadPage: FC<NewThreadPageProps> = ({ models, currentModel, cu
     const cleanProvider = newProvider.trim() || "codex-aws";
     setModelProvider(cleanProvider);
     setConfigToml((prev) => ({ ...prev, model_provider: cleanProvider }));
+
+    if (onOpenProviderModal && cleanProvider !== modelProvider) {
+      onOpenProviderModal(cleanProvider);
+    }
   };
 
   const handleResetDefaults = () => {
@@ -213,23 +216,14 @@ export const NewThreadPage: FC<NewThreadPageProps> = ({ models, currentModel, cu
     };
 
     try {
-      const resp = await fetch("/api/codex/threads/ensure-and-save", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-
-      const data = await resp.json();
-      if (!resp.ok) {
-        throw new Error(data.error || "Failed to prepare server configuration");
-      }
       try {
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(payload));
+        localStorage.setItem("codex_last_provider", modelProvider);
       } catch {
         // ignore
       }
 
-      setStatusMessage({ text: "Server verified. Starting thread...", type: "success" });
+      setStatusMessage({ text: "Initializing thread via WebSocket...", type: "success" });
 
       // 3. Trigger onStartThread with full hydrated payload
       await onStartThread(payload);
@@ -353,28 +347,19 @@ export const NewThreadPage: FC<NewThreadPageProps> = ({ models, currentModel, cu
 
                 <div className="flex gap-2">
                   <div className="relative flex-1">
-                    <input
-                      type="text"
-                      value={cwd}
-                      onChange={(e) => setCwd(e.target.value)}
+                    <input type="text" value={cwd} onChange={(e) => setCwd(e.target.value)}
                       placeholder="/workspace or project path"
                       className="w-full bg-zinc-900 border border-zinc-800 hover:border-zinc-700 focus:border-emerald-500 rounded-lg px-3 py-2 text-xs text-zinc-100 font-mono transition-colors"
                     />
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handlePickDirectory}
+                  <Button type="button" variant="outline" onClick={handlePickDirectory}
                     className="border-zinc-800 text-zinc-300 hover:text-zinc-100 gap-1.5 text-xs h-9 px-3 cursor-pointer"
                     title="Select folder via File System Access API without uploading files"
                   >
                     <FolderOpen className="w-3.5 h-3.5 text-emerald-400" />
                     <span>Pick Directory</span>
                   </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setShowDirPicker(true)}
+                  <Button type="button" variant="ghost" onClick={() => setShowDirPicker(true)}
                     className="text-zinc-400 hover:text-zinc-200 text-xs h-9 px-2.5"
                     title="Browse server directories"
                   >
@@ -399,7 +384,6 @@ export const NewThreadPage: FC<NewThreadPageProps> = ({ models, currentModel, cu
                       setConfigToml((prev) => ({ ...prev, model: m }));
                     }}
                     onSelectProvider={handleProviderChange}
-                    variant="form"
                   />
 
                   <ReasoningEffortSelector

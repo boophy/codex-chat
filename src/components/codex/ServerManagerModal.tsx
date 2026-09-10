@@ -1,14 +1,14 @@
-import { FC, useEffect, useState } from "react";
-import { Server, Play, Square, RefreshCw, Terminal, KeyRound, ExternalLink, Plus } from "lucide-react";
+import { FC, useEffect, useState, useRef } from "react";
+import { Server, Play, Square, RefreshCw, Terminal, KeyRound, ExternalLink, Plus, Check } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/src/components/ui/dialog";
 import { Button } from "@/src/components/ui/button";
 import { Badge } from "@/src/components/ui/badge";
+import { wsClient } from "@/src/lib/websocket-client";
+import { CodexAuthClient } from "@/src/lib/auth-client";
 import { cn } from "@/src/lib/utils";
+import { ServerManagerModalProps } from "@/src/types";
 
-export interface ServerManagerModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
+export type { ServerManagerModalProps };
 
 export const ServerManagerModal: FC<ServerManagerModalProps> = ({ open, onOpenChange }) => {
   const [servers, setServers] = useState<any[]>([]);
@@ -100,30 +100,80 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({ open, onOpenCh
     }
   };
 
+  const [lastLoginId, setLastLoginId] = useState<string | null>(null);
+  const unsubLoginRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (unsubLoginRef.current) {
+        unsubLoginRef.current();
+        unsubLoginRef.current = null;
+      }
+    };
+  }, []);
+
   const handleAccountAction = async (action: "start" | "cancel" | "logout" | "read") => {
     setAccountLoading(true);
     setAccountResult(null);
     try {
-      let res;
       if (action === "read") {
-        res = await fetch(`/api/codex/account/read?type=${encodeURIComponent(accountType)}`);
-      } else {
-        res = await fetch(`/api/codex/account/login/${action === "start" ? "start" : action === "cancel" ? "cancel" : ""}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ type: accountType, codexHome: `~/.codex-${accountType}` })
+        const res = await CodexAuthClient.checkAccountStatus(wsClient);
+        setAccountResult({
+          method: "account/read",
+          transport: "WebSocket JSON-RPC",
+          result: res
         });
-        if (action === "logout") {
-          res = await fetch("/api/codex/account/logout", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ type: accountType, codexHome: `~/.codex-${accountType}` })
-          });
+      } else if (action === "start") {
+        const startRes = await CodexAuthClient.startLogin(wsClient, {
+          type: "chatgpt",
+          appBrand: "codex",
+          codexStreamlinedLogin: true,
+          useHostedLoginSuccessPage: true
+        });
+        setLastLoginId(startRes.loginId);
+        setAccountResult({
+          method: "account/login/start",
+          transport: "WebSocket JSON-RPC",
+          result: startRes
+        });
+        // Open browser
+        if (startRes.authUrl) {
+          CodexAuthClient.openAuthInBrowser(startRes.authUrl);
         }
+        // Listen for completed/updated
+        if (unsubLoginRef.current) unsubLoginRef.current();
+        unsubLoginRef.current = CodexAuthClient.listenAuthNotifications(
+          wsClient,
+          (completed) => {
+            setAccountResult((prev: any) => ({
+              ...prev,
+              latestNotification: "account/login/completed",
+              completedNotification: completed
+            }));
+          },
+          (updated) => {
+            setAccountResult((prev: any) => ({
+              ...prev,
+              latestNotification: "account/updated",
+              updatedNotification: updated
+            }));
+          }
+        );
+      } else if (action === "cancel") {
+        const cancelRes = await CodexAuthClient.cancelLogin(wsClient, lastLoginId || "manual-cancel");
+        setAccountResult({
+          method: "account/login/cancel",
+          transport: "WebSocket JSON-RPC",
+          result: cancelRes
+        });
+      } else if (action === "logout") {
+        await CodexAuthClient.logout(wsClient);
+        setAccountResult({
+          method: "account/logout",
+          transport: "WebSocket JSON-RPC",
+          result: { success: true, message: "Logged out. Credentials cleared." }
+        });
       }
-      const data = await res?.json();
-      setAccountResult(data);
-      await fetchServers();
     } catch (err: any) {
       setAccountResult({ error: err.message });
     } finally {
@@ -361,17 +411,29 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({ open, onOpenCh
             </div>
 
             {accountResult && (
-              <div className="p-2.5 rounded bg-zinc-950 border border-zinc-800 font-mono text-[11px] text-zinc-300 space-y-1">
-                <div className="text-zinc-500 font-semibold">Response:</div>
-                {accountResult?.data?.url && (
-                  <div className="flex items-center gap-1.5 text-indigo-400 underline">
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    <a href={accountResult.data.url} target="_blank" rel="noreferrer">
-                      Open Login Authorization URL
-                    </a>
+              <div className="p-2.5 rounded bg-zinc-950 border border-zinc-800 font-mono text-[11px] text-zinc-300 space-y-1.5">
+                <div className="flex items-center justify-between text-zinc-400 font-semibold">
+                  <span>RPC Response ({accountResult.transport || "WebSocket"}):</span>
+                  {accountResult?.latestNotification && (
+                    <Badge variant="purple" className="text-[9px] py-0">
+                      {accountResult.latestNotification}
+                    </Badge>
+                  )}
+                </div>
+                {accountResult?.result?.authUrl && (
+                  <div className="flex items-center gap-2 pt-0.5">
+                    <Button
+                      size="sm"
+                      onClick={() => CodexAuthClient.openAuthInBrowser(accountResult.result.authUrl)}
+                      className="h-7 text-xs bg-indigo-600 hover:bg-indigo-500 text-white gap-1"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      <span>Open Browser OAuth URL</span>
+                    </Button>
+                    <span className="text-[10px] text-zinc-500 truncate">{accountResult.result.authUrl}</span>
                   </div>
                 )}
-                <pre className="text-zinc-400 overflow-x-auto text-[10px]">
+                <pre className="text-zinc-400 overflow-x-auto text-[10px] bg-zinc-900/60 p-2 rounded">
                   {JSON.stringify(accountResult, null, 2)}
                 </pre>
               </div>

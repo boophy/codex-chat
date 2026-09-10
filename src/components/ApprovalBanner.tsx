@@ -1,17 +1,12 @@
-import { FC } from "react";
 import { ShieldAlert, Terminal, FileCode, Check, X, Clock } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { Badge } from "@/src/components/ui/badge";
-import { CommandExecutionRequestApprovalParams, FileChangeRequestApprovalParams } from "@/src/types/protocol";
+import { ApprovalBannerProps } from "@/src/types";
+import * as React from "react";
 
-interface ApprovalBannerProps {
-  commandRequest: CommandExecutionRequestApprovalParams | null;
-  fileRequest: FileChangeRequestApprovalParams | null;
-  onDecideCommand: (decision: "accept" | "acceptForSession" | "decline" | "cancel") => void;
-  onDecideFile: (decision: "accept" | "acceptForSession" | "decline" | "cancel") => void;
-}
+export type { ApprovalBannerProps };
 
-export const ApprovalBanner: FC<ApprovalBannerProps> = ({
+export const ApprovalBanner: React.FC<ApprovalBannerProps> = ({
   commandRequest,
   fileRequest,
   onDecideCommand,
@@ -46,27 +41,23 @@ export const ApprovalBanner: FC<ApprovalBannerProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
-            <Button size="sm" variant="outline"
-              onClick={() => onDecideCommand("cancel")}
+            <Button size="sm" variant="outline" onClick={() => onDecideCommand("cancel")}
               className="text-zinc-400 hover:text-zinc-200 border-zinc-700"
             >
               <X className="w-3.5 h-3.5 mr-1" />
               Cancel Turn
             </Button>
-            <Button size="sm" variant="destructive"
-              onClick={() => onDecideCommand("decline")}
-            >
+            <Button size="sm" variant="destructive" onClick={() => onDecideCommand("decline")} >
               <X className="w-3.5 h-3.5 mr-1" />
               Decline
             </Button>
-            <Button size="sm" variant="secondary"
-              onClick={() => onDecideCommand("acceptForSession")}
+            <Button size="sm" variant="secondary" onClick={() => onDecideCommand("acceptForSession")}
               className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200"
             >
               <Clock className="w-3.5 h-3.5 mr-1" />
               Allow for Session
             </Button>
-            <Button size="sm" variant="accent" onClick={() => onDecideCommand("accept")}>
+            <Button size="sm" variant="accent" onClick={() => onDecideCommand("accept")} >
               <Check className="w-3.5 h-3.5 mr-1" />
               Approve Once
             </Button>
@@ -104,9 +95,7 @@ export const ApprovalBanner: FC<ApprovalBannerProps> = ({
               <X className="w-3.5 h-3.5 mr-1" />
               Decline
             </Button>
-            <Button size="sm" variant="secondary"
-              onClick={() => onDecideFile("acceptForSession")}
-            >
+            <Button size="sm" variant="secondary" onClick={() => onDecideFile("acceptForSession")} >
               <Clock className="w-3.5 h-3.5 mr-1" />
               Allow for Session
             </Button>

@@ -1,31 +1,14 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/src/components/ui/dialog";
-import { Model, AskForApproval, ApprovalsReviewer } from "@/src/types/protocol";
+import { AskForApproval, ApprovalsReviewer, SessionStartSource, SessionModalProps, NewThreadModalProps } from "@/src/types";
 import { ReasoningEffortSelector } from "./ReasoningEffortSelector";
-import { Cpu, AlertCircle, Check } from "lucide-react";
+import { Cpu, AlertCircle, Check, Server } from "lucide-react";
 import { ApprovalSettings } from "./ApprovalSettings";
 import { Button } from "@/src/components/ui/button";
 import { ModelSelector } from "./ModelSelector";
 import { useState, FC, useEffect } from "react";
 import { cn } from "@/src/lib/utils";
 
-export type SessionStartSource = "startup" | "clear";
-export interface SessionModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  models: Model[];
-  currentModel: string;
-  currentEffort: string;
-  currentApprovalPolicy: AskForApproval;
-  currentApprovalsReviewer?: ApprovalsReviewer;
-  onSelectModel?: (model: string) => void;
-  onSelectEffort?: (effort: string) => void;
-  onSelectApprovalPolicy?: (policy: AskForApproval) => void;
-  onSelectApprovalsReviewer?: (reviewer: ApprovalsReviewer) => void;
-  onStartThread?: (params: any) => Promise<void> | void;
-}
-
-export type NewThreadModalProps = SessionModalProps;
-
+export type { SessionStartSource, SessionModalProps, NewThreadModalProps };
 const LOCAL_STORAGE_KEY = "codex_thread_config_v2";
 
 export const SessionModal: FC<SessionModalProps> = ({
@@ -36,13 +19,15 @@ export const SessionModal: FC<SessionModalProps> = ({
   currentEffort,
   currentApprovalPolicy,
   currentApprovalsReviewer = "user",
+  currentProvider = "codex-aws",
   onSelectModel,
   onSelectEffort,
   onSelectApprovalPolicy,
   onSelectApprovalsReviewer,
-  onStartThread
+  onStartThread,
+  onSwitchProvider
 }) => {
-  const [modelProvider, setModelProvider] = useState<string>("codex-aws");
+  const [modelProvider, setModelProvider] = useState<string>(currentProvider || "codex-aws");
   const [model, setModel] = useState<string>(currentModel || "gpt-5");
   const [reasoningEffort, setReasoningEffort] = useState<string>(currentEffort || "medium");
   const [approvalPolicy, setApprovalPolicy] = useState<AskForApproval>(currentApprovalPolicy || "on-request");
@@ -51,18 +36,20 @@ export const SessionModal: FC<SessionModalProps> = ({
 
   // Sync state when props or open state change
   useEffect(() => {
+    if (currentProvider) setModelProvider(currentProvider);
     if (currentModel) setModel(currentModel);
     if (currentEffort) setReasoningEffort(currentEffort);
     if (currentApprovalPolicy) setApprovalPolicy(currentApprovalPolicy);
     if (currentApprovalsReviewer) setApprovalsReviewer(currentApprovalsReviewer);
-  }, [currentModel, currentEffort, currentApprovalPolicy, currentApprovalsReviewer, open]);
+  }, [currentProvider, currentModel, currentEffort, currentApprovalPolicy, currentApprovalsReviewer, open]);
 
+  // Load provider & defaults from local storage
   useEffect(() => {
     try {
       const cached = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (cached) {
         const parsed = JSON.parse(cached);
-        if (parsed.modelProvider) setModelProvider(parsed.modelProvider);
+        if (parsed.modelProvider && !currentProvider) setModelProvider(parsed.modelProvider);
         if (parsed.model && !currentModel) setModel(parsed.model);
         if (parsed.approvalPolicy && !currentApprovalPolicy) setApprovalPolicy(parsed.approvalPolicy);
         if (parsed.approvalsReviewer && !currentApprovalsReviewer) setApprovalsReviewer(parsed.approvalsReviewer);
@@ -86,6 +73,11 @@ export const SessionModal: FC<SessionModalProps> = ({
     const cleanProvider = newProvider.trim() || "codex-aws";
     setModelProvider(cleanProvider);
     saveToStorage({ modelProvider: cleanProvider });
+
+    if (cleanProvider !== currentProvider && onSwitchProvider) {
+      onOpenChange(false);
+      onSwitchProvider(cleanProvider);
+    }
   };
 
   const handleModelChange = (newModel: string) => {
@@ -135,8 +127,7 @@ export const SessionModal: FC<SessionModalProps> = ({
 
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {statusMessage && (
-            <div
-              className={cn(
+            <div className={cn(
                 "p-2.5 rounded-md text-xs flex items-center gap-2",
                 statusMessage.type === "error" && "bg-rose-950/40 border border-rose-800 text-rose-300",
                 statusMessage.type === "info" && "bg-indigo-950/40 border border-indigo-800 text-indigo-300",
@@ -155,7 +146,6 @@ export const SessionModal: FC<SessionModalProps> = ({
               selectedProvider={modelProvider}
               onSelectModel={handleModelChange}
               onSelectProvider={handleProviderChange}
-              variant="form"
             />
 
             <ReasoningEffortSelector
@@ -174,8 +164,22 @@ export const SessionModal: FC<SessionModalProps> = ({
         </div>
 
         <DialogFooter className="px-6 py-3 border-t border-zinc-800 bg-zinc-900/30 flex items-center justify-between sm:justify-between shrink-0">
-          <div className="text-[11px] text-zinc-500 font-mono">
-            {modelProvider} : {model} ({reasoningEffort})
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] text-zinc-500 font-mono hidden sm:inline">
+              {modelProvider} : {model} ({reasoningEffort})
+            </span>
+            {onSwitchProvider && (
+              <Button type="button" variant="outline" size="sm"
+                onClick={() => {
+                  onOpenChange(false);
+                  onSwitchProvider(modelProvider);
+                }}
+                className="border-zinc-700 bg-zinc-900 text-zinc-200 text-xs h-8 gap-1.5 cursor-pointer hover:bg-zinc-800"
+              >
+                <Server className="w-3.5 h-3.5 text-indigo-400" />
+                <span>重启并验证登录</span>
+              </Button>
+            )}
           </div>
           <Button type="button" size="sm" onClick={() => onOpenChange(false)}
             className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-4 h-8 cursor-pointer gap-1.5"

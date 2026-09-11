@@ -98,10 +98,10 @@ export const SettingsModal: FC<SettingsModalProps> = ({
               >
                 /ws (Proxy - Fixes 403)
               </button>
-              <button type="button" onClick={() => setUrl("ws://127.0.0.1:8081")}
+              <button type="button" onClick={() => setUrl("ws://127.0.0.1:3000/ws")}
                 className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-mono text-[10px] transition-colors border border-zinc-700"
               >
-                ws://127.0.0.1:8081 (Bridge)
+                ws://127.0.0.1:3000/ws (Bridge)
               </button>
               <button type="button" onClick={() => setUrl("ws://127.0.0.1:8080")}
                 className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-400 font-mono text-[10px] transition-colors border border-zinc-700"
@@ -133,15 +133,15 @@ export const SettingsModal: FC<SettingsModalProps> = ({
               </div>
 
               <div>
-                <div className="text-indigo-400 font-semibold"># 2. Start Frontend (Vite with Origin-stripping Proxy)</div>
-                <div className="text-zinc-400">npm run dev:real</div>
-                <div className="text-[9px] text-zinc-500">Connect to &quot;/ws&quot; in the web UI.</div>
+                <div className="text-indigo-400 font-semibold"># 2. Start the Bridge (origin-stripping proxy + UI)</div>
+                <div className="text-zinc-400">CODEX_BACKEND_URL=ws://127.0.0.1:8080 npm run codex:bridge</div>
+                <div className="text-[9px] text-zinc-500">Connect to &quot;/ws&quot; in the web UI. Set CODEX_BACKEND_URL to your app-server&apos;s --listen address.</div>
               </div>
 
               <div>
-                <div className="text-purple-400 font-semibold"># Alternative: Run Dedicated WebSocket Bridge</div>
-                <div className="text-zinc-400">npm run codex:bridge</div>
-                <div className="text-[9px] text-zinc-500">Connect to &quot;ws://127.0.0.1:8081&quot; in the web UI.</div>
+                <div className="text-purple-400 font-semibold"># Alternative: Vite-only dev server (no REST API)</div>
+                <div className="text-zinc-400">npm run dev:codex</div>
+                <div className="text-[9px] text-zinc-500">Connect to &quot;/ws&quot; in the web UI; proxies to CODEX_WS_URL (default ws://127.0.0.1:8080).</div>
               </div>
             </div>
 

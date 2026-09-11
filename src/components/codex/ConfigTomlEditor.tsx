@@ -1,6 +1,6 @@
 import { ConfigToml, SandboxMode, WebSearchMode, ReasoningEffort, AutoCompactTokenLimitScope, ConfigTomlEditorProps, JsonValueType, CustomKeyValueEntry } from "@/src/types";
 import { Sliders, RefreshCw, Code2, Plus, Trash2, Edit2, Check, Cpu, Layers, Shield, Bot, AlertCircle } from "lucide-react";
-import { useState, useEffect, FC, useMemo } from "react";
+import { useState, useEffect, FC, useMemo, type FormEvent } from "react";
 import { wsClient } from "@/src/lib/websocket-client";
 import { Button } from "@/src/components/ui/button";
 import { cn } from "@/src/lib/utils";
@@ -126,7 +126,7 @@ export const ConfigTomlEditor: FC<ConfigTomlEditorProps> = ({ config, onChange, 
     return entries;
   }, [config]);
 
-  const handleSaveCustomEntry = (e: SubmitEvent) => {
+  const handleSaveCustomEntry = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setCustomError(null);
     const key = newKeyName.trim();
@@ -291,8 +291,8 @@ export const ConfigTomlEditor: FC<ConfigTomlEditorProps> = ({ config, onChange, 
                     <span>Model Provider (model_provider)</span>
                     <span className="text-zinc-500 text-[10px] font-mono">codex-aws / openai</span>
                   </label>
-                  <input type="text" placeholder="codex-aws"
-                    value={config.model_provider ?? modelProvider ?? "codex-aws"}
+                  <input type="text" placeholder="shengsuanyun"
+                    value={config.model_provider ?? modelProvider ?? "shengsuanyun"}
                     onChange={(e) => handleFieldChange("model_provider", e.target.value)}
                     className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-zinc-100 font-mono focus:border-zinc-700 focus:outline-none"
                   />

@@ -1,4 +1,4 @@
-import { Thread, ThreadItem, Model, SkillMetadata, AppInfo, GetAccountRateLimitsResponse, ServerDiagnosticsResponse, ThreadTokenUsage, CommandExecutionRequestApprovalParams, FileChangeRequestApprovalParams, AskForApproval, ReasoningEffort, UserInput, ConnectionStatus, LogFrame, AccountStatusResult } from "@/src/types";
+import { Thread, ThreadItem, SkillMetadata, AppInfo, GetAccountRateLimitsResponse, ServerDiagnosticsResponse, ThreadTokenUsage, CommandExecutionRequestApprovalParams, FileChangeRequestApprovalParams, AskForApproval, ReasoningEffort, UserInput, ConnectionStatus, LogFrame, AccountStatusResult } from "@/src/types";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ProtocolInspector } from "@/src/components/ProtocolInspector";
 import { NewThreadPage } from "@/src/components/codex/NewThreadPage";
@@ -12,24 +12,24 @@ import { ScrollArea } from "@/src/components/ui/scroll-area";
 import { MessageItem } from "@/src/components/MessageItem";
 import { ChatHeader } from "@/src/components/ChatHeader";
 import { CodexAuthClient } from "@/src/lib/auth-client";
+import { useCodex, resolveProvider } from "@/src/lib/ctx";
 import { ChatInput } from "@/src/components/ChatInput";
 import { wsClient } from "@/src/lib/websocket-client";
 import { Sidebar } from "@/src/components/Sidebar";
 
 export default function App() {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("disconnected");
-  const [currentView, setCurrentView] = useState<"chat" | "new-thread">("chat");
+  const [currentView, setCurrentView] = useState<"chat" | "new-thread" | "services">("chat");
   const [threads, setThreads] = useState<Thread[]>([]);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const [currentThread, setCurrentThread] = useState<Thread | null>(null);
-  const [models, setModels] = useState<Model[]>([]);
   const [skills, setSkills] = useState<SkillMetadata[]>([]);
   const [apps, setApps] = useState<AppInfo[]>([]);
   const [rateLimits, setRateLimits] = useState<GetAccountRateLimitsResponse | null>(null);
   const [diagnostics, setDiagnostics] = useState<ServerDiagnosticsResponse | null>(null);
   const [currentAccount, setCurrentAccount] = useState<AccountStatusResult | null>(null);
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
-  const [selectedModel, setSelectedModel] = useState("gpt-5.4-codex");
+  const [selectedModel, setSelectedModel] = useState("openai/gpt-6-astra");
   const [selectedEffort, setSelectedEffort] = useState<ReasoningEffort>("medium");
   const [approvalPolicy, setApprovalPolicy] = useState<AskForApproval>("on-request");
   const [tokenUsage, setTokenUsage] = useState<ThreadTokenUsage | null>(null);
@@ -45,16 +45,11 @@ export default function App() {
   const [logs, setLogs] = useState<LogFrame[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const [currentProvider, setCurrentProvider] = useState<string>(() => {
-    try {
-      const cached = localStorage.getItem("codex_thread_config_v2");
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (parsed.modelProvider) return parsed.modelProvider;
-      }
-    } catch {}
-    return "shengsuanyun";
-  });
+  const { provider, models, dispatch } = useCodex();
+  const currentProvider = provider.id;
+  const setCurrentProvider = useCallback((id: string) => {
+    dispatch({ type: "SET_PROVIDER", payload: resolveProvider(id) });
+  }, [dispatch]);
   const hasInitialLoginPrompted = useRef<boolean>(false);
   const [showProviderSwitchModal, setShowProviderSwitchModal] = useState<boolean>(false);
   const [targetSwitchProvider, setTargetSwitchProvider] = useState<string | undefined>(undefined);
@@ -98,7 +93,7 @@ export default function App() {
       }
 
       if (modelListRes.status === "fulfilled" && modelListRes.value?.data) {
-        setModels(modelListRes.value.data);
+        dispatch({ type: "SET_MODELS", payload: modelListRes.value.data });
       }
 
       if (skillsListRes.status === "fulfilled" && skillsListRes.value?.data) {
@@ -649,19 +644,15 @@ export default function App() {
             approvalPolicy={approvalPolicy}
             tokenUsage={tokenUsage}
             isTurnInProgress={isTurnInProgress}
-            connectionStatus={connectionStatus}
             showInspector={showInspector}
             currentProvider={currentProvider}
-            currentAccount={currentAccount}
             onSelectModel={setSelectedModel}
             onSelectEffort={(eff) => setSelectedEffort(eff as ReasoningEffort)}
             onSelectApprovalPolicy={setApprovalPolicy}
             onInterrupt={handleInterrupt}
             onToggleInspector={() => setShowInspector(!showInspector)}
             onOpenSettings={() => setShowSettings(true)}
-            onReconnect={connectAndInitialize}
-            onOpenProviderModal={handleOpenProviderModal}
-            onOpenLoginModal={() => setShowLoginModal(true)}
+            onOpenProviderModal= {handleOpenProviderModal}
           />
 
           <div className="flex-1 flex min-h-0 relative">
@@ -775,11 +766,6 @@ export default function App() {
         currentThread={currentThread}
         onProviderSwitched={(newProvider) => {
           setCurrentProvider(newProvider);
-          try {
-            const cached = localStorage.getItem("codex_thread_config_v2");
-            const data = cached ? JSON.parse(cached) : {};
-            localStorage.setItem("codex_thread_config_v2", JSON.stringify({ ...data, modelProvider: newProvider }));
-          } catch {}
         }}
         onThreadRestored={(restoredThread) => {
           setCurrentThread(restoredThread);
@@ -798,11 +784,6 @@ export default function App() {
         currentProvider={currentProvider}
         onProviderChange={async (newProvider) => {
           setCurrentProvider(newProvider);
-          try {
-            const cached = localStorage.getItem("codex_thread_config_v2");
-            const data = cached ? JSON.parse(cached) : {};
-            localStorage.setItem("codex_thread_config_v2", JSON.stringify({ ...data, modelProvider: newProvider }));
-          } catch {}
           await fetchInitialData();
         }}
         onLoginSuccess={() => {

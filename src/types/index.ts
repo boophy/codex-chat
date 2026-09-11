@@ -3,6 +3,7 @@ export * from "./auth";
 export * from "./provider";
 export * from "./config";
 export * from "./session";
+export * from "./thread";
 export * from "./rpc";
 export * from "./server";
 export * from "./components";

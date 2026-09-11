@@ -6,6 +6,7 @@ import { ConnectionStatus, LogFrame } from "./rpc";
 export interface ServerManagerModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onOpenFullPage?: () => void;
 }
 
 export interface ApprovalPolicySelectorProps {
@@ -136,19 +137,16 @@ export interface ChatHeaderProps {
   approvalPolicy: AskForApproval;
   tokenUsage: ThreadTokenUsage | null;
   isTurnInProgress: boolean;
-  connectionStatus: ConnectionStatus;
   showInspector: boolean;
   currentProvider?: string;
-  currentAccount?: AccountStatusResult | null;
   onSelectModel: (model: string) => void;
   onSelectEffort: (effort: string) => void;
   onSelectApprovalPolicy: (policy: AskForApproval) => void;
   onInterrupt: () => void;
   onToggleInspector: () => void;
   onOpenSettings: () => void;
-  onReconnect: () => void;
+  onOpenServerSettings?: () => void;
   onOpenProviderModal?: (provider?: string) => void;
-  onOpenLoginModal?: () => void;
 }
 
 export interface SidebarProps {
@@ -186,6 +184,20 @@ export interface SettingsModalProps {
   diagnostics: ServerDiagnosticsResponse | null;
   onSaveWsUrl: (url: string) => void;
   onFetchDiagnostics: () => void;
+  onOpenFullPage?: () => void;
+}
+
+export interface ServerSettingsPageProps {
+  currentWsUrl: string;
+  connectionStatus: ConnectionStatus;
+  diagnostics: ServerDiagnosticsResponse | null;
+  currentProvider?: string;
+  onBack: () => void;
+  onSaveWsUrl: (url: string) => void;
+  onFetchDiagnostics: () => void;
+  onOpenProviderModal?: (provider?: string) => void;
+  onOpenLoginModal?: () => void;
+  onRefreshConnection?: () => void;
 }
 
 export interface ProtocolInspectorProps {

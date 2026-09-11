@@ -8,6 +8,7 @@ import { Button } from "@/src/components/ui/button";
 import { ModelSelector } from "./ModelSelector";
 import { FC, useEffect, useState } from "react";
 import { cn } from "@/src/lib/utils";
+import { useCodex } from "@/src/lib/ctx";
 
 export type { SessionStartSource, NewThreadPageProps };
 
@@ -18,12 +19,13 @@ export const NewThreadPage: FC<NewThreadPageProps> = ({
   currentModel,
   currentEffort,
   currentApprovalPolicy,
-  currentProvider = "codex-aws",
+  currentProvider = "shengsuanyun",
   onBack,
   onStartThread,
   onOpenProviderModal
 }) => {
-  const [modelProvider, setModelProvider] = useState<string>(currentProvider || "codex-aws");
+  const { dispatch } = useCodex();
+  const [modelProvider, setModelProvider] = useState<string>(currentProvider || "shengsuanyun");
   const [model, setModel] = useState<string>(currentModel || "gpt-5");
   const [reasoningEffort, setReasoningEffort] = useState<string>(currentEffort || "medium");
   const [cwd, setCwd] = useState<string>("");
@@ -37,7 +39,7 @@ export const NewThreadPage: FC<NewThreadPageProps> = ({
   const [sessionStartSource, setSessionStartSource] = useState<SessionStartSource>("startup");
   
   const [configToml, setConfigToml] = useState<Partial<ConfigToml>>({
-    model_provider: "codex-aws",
+    model_provider: "shengsuanyun",
     model: "gpt-5",
     sandbox_mode: "workspace_write",
     web_search: "live",
@@ -86,7 +88,7 @@ export const NewThreadPage: FC<NewThreadPageProps> = ({
   }, []);
 
   const handleProviderChange = (newProvider: string) => {
-    const cleanProvider = newProvider.trim() || "codex-aws";
+    const cleanProvider = newProvider.trim() || "shengsuanyun";
     setModelProvider(cleanProvider);
     setConfigToml((prev) => ({ ...prev, model_provider: cleanProvider }));
 
@@ -96,7 +98,7 @@ export const NewThreadPage: FC<NewThreadPageProps> = ({
   };
 
   const handleResetDefaults = () => {
-    setModelProvider("codex-aws");
+    setModelProvider("shengsuanyun");
     setModel(currentModel || "gpt-5");
     setReasoningEffort(currentEffort || "medium");
     setApprovalPolicy("on-request");
@@ -108,7 +110,7 @@ export const NewThreadPage: FC<NewThreadPageProps> = ({
     setEphemeral(false);
     setSessionStartSource("startup");
     setConfigToml({
-      model_provider: "codex-aws",
+      model_provider: "shengsuanyun",
       model: "gpt-5",
       sandbox_mode: "workspace_write",
       web_search: "live",
@@ -190,7 +192,7 @@ export const NewThreadPage: FC<NewThreadPageProps> = ({
     setIsSubmitting(true);
     setStatusMessage({ text: "Ensuring Codex backend app-server and saving configuration...", type: "info" });
 
-    const effectiveProvider = (modelProvider && modelProvider.trim()) || "codex-aws";
+    const effectiveProvider = (modelProvider && modelProvider.trim()) || "shengsuanyun";
     const effectiveCwd = (cwd && cwd.trim()) || "";
 
     const payload = {
@@ -214,7 +216,7 @@ export const NewThreadPage: FC<NewThreadPageProps> = ({
       ephemeral,
       sessionStartSource
     };
-
+    dispatch({ type: "UPDATE_THREAD", payload });
     try {
       try {
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(payload));
@@ -524,7 +526,7 @@ export const NewThreadPage: FC<NewThreadPageProps> = ({
               <div className="flex items-center justify-between">
                 <span className="text-zinc-500">Model Provider:</span>
                 <span className="font-mono text-zinc-200 bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800">
-                  {modelProvider || "codex-aws"}
+                  {modelProvider || "shengsuanyun"}
                 </span>
               </div>
 
@@ -569,7 +571,7 @@ export const NewThreadPage: FC<NewThreadPageProps> = ({
               <div className="pt-2 border-t border-zinc-800 space-y-1 text-[11px] text-zinc-500">
                 <div className="flex justify-between">
                   <span>Backend Server Mapping:</span>
-                  <span className="font-mono text-zinc-400">~/.{modelProvider || "codex-aws"}</span>
+                  <span className="font-mono text-zinc-400">~/.{modelProvider || "shengsuanyun"}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Session Mode:</span>

@@ -1,7 +1,7 @@
 import { Folder, FolderPlus, FolderOpen, ArrowUp, RefreshCw, Home, HardDrive, Check, ChevronRight, Eye, EyeOff, Search, AlertCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/src/components/ui/dialog";
 import { DirectoryPickerDialogProps, DirEntry, RootEntry} from "@/src/types";
-import { FC, Fragment, useEffect, useMemo, useState } from "react";
+import { FC, Fragment, useEffect, useMemo, useState, type FormEvent } from "react";
 import { Button } from "@/src/components/ui/button";
 import { cn } from "@/src/lib/utils";
 
@@ -67,7 +67,7 @@ export const DirectoryPickerDialog: FC<DirectoryPickerDialogProps> = ({ open, on
     loadDirectory(dirPath);
   };
 
-  const handleCreateDirectory = async (e: SubmitEvent) => {
+  const handleCreateDirectory = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!newDirName.trim()) return;
     setCreateLoading(true);

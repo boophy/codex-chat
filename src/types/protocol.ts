@@ -490,6 +490,7 @@ export interface FileChangeRequestApprovalParams {
   startedAtMs: number;
   reason?: string | null;
   grantRoot?: string | null;
+  changes?: Array<FileUpdateChange> | null;
 }
 
 export interface FileChangeRequestApprovalResponse {
@@ -739,6 +740,12 @@ export interface ModelServiceTier {
 export interface Model {
   id: string;
   model: string;
+  modelProvider?: string | null;
+  tag?: string | null;
+  context_window?: number | null;
+  input_price?: number | null;
+  output_price?: number | null;
+  reasoning_effort: ReasoningEffort | null;
   upgrade: string | null;
   upgradeInfo: any | null;
   availabilityNux: any | null;
@@ -885,6 +892,7 @@ export interface GetAccountRateLimitsResponse {
 export interface ServerDiagnosticsProcess {
   id: number;
   residentMemoryBytes: number | null;
+  virtualMemoryBytes: number | null;
   physicalFootprintBytes: number | null;
 }
 

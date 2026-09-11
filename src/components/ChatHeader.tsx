@@ -3,7 +3,7 @@ import { Cpu, Coins, Square, Radio } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { Badge } from "@/src/components/ui/badge";
 import { ChatHeaderProps} from "@/src/types";
-import * as React from "react";
+import { FC, useState } from "react";
 
 export type { ChatHeaderProps };
 
@@ -15,21 +15,17 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   approvalPolicy,
   tokenUsage,
   isTurnInProgress,
-  connectionStatus,
   showInspector,
-  currentProvider = "codex-aws",
-  currentAccount,
+  currentProvider = "shengsuanyun",
   onSelectModel,
   onSelectEffort,
   onSelectApprovalPolicy,
   onInterrupt,
   onToggleInspector,
   onOpenSettings,
-  onReconnect,
-  onOpenProviderModal,
-  onOpenLoginModal
+  onOpenProviderModal
 }) => {
-  const [showSessionModal, setShowSessionModal] = React.useState(false);
+  const [showSessionModal, setShowSessionModal] = useState(false);
   const currentModelObj = models.find((m) => m.id === selectedModel || m.model === selectedModel);
 
   return (

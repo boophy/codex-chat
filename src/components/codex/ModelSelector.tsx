@@ -1,14 +1,14 @@
-import { Thread, ProviderOption, ModelOption, SwitchStage, ModelSelectorProps, SUPPORTED_PROVIDERS, DEFAULT_POPULAR_MODELS } from "@/src/types";
+import { Thread, ProviderOption, SwitchStage, ModelSelectorProps, SUPPORTED_PROVIDERS } from "@/src/types";
 import { Server, Check, ChevronsUpDown, Sparkles, Search, X } from "lucide-react";
 import { CodexAuthClient, AccountStatusResult } from "@/src/lib/auth-client";
 import { FC, useEffect, useMemo, useRef, useState } from "react";
 import { wsClient } from "@/src/lib/websocket-client";
 import { cn } from "@/src/lib/utils";
 
-export type { ProviderOption, ModelOption, SwitchStage, ModelSelectorProps };
+export type { ProviderOption, SwitchStage, ModelSelectorProps };
 export const ModelSelector: FC<ModelSelectorProps> = ({
   models = [],
-  selectedModel = "gpt-5.4-codex",
+  selectedModel = "openai/gpt-6-astra",
   currentModel,
   selectedProvider = "shengsuanyun",
   currentProvider = "shengsuanyun",
@@ -24,8 +24,8 @@ export const ModelSelector: FC<ModelSelectorProps> = ({
   onRefreshData,
   onOpenLoginModal
 }) => {
-  const effectiveModel = selectedModel || currentModel || "gpt-5.4-codex";
-  const effectiveCurrentProvider = currentProvider || selectedProvider || "codex-aws";
+  const effectiveModel = selectedModel || currentModel || "openai/gpt-6-astra";
+  const effectiveCurrentProvider = currentProvider || selectedProvider || "shengsuanyun";
   const [internalModalOpen, setInternalModalOpen] = useState(false);
   const isModalMode = open !== undefined ? open : internalModalOpen;
   const setModalOpen = onOpenChange || setInternalModalOpen;
@@ -279,36 +279,6 @@ export const ModelSelector: FC<ModelSelectorProps> = ({
     }
   };
 
-  // Build merged model list
-  const allModelOptions = useMemo<ModelOption[]>(() => {
-    const list: ModelOption[] = [];
-    const seen = new Set<string>();
-
-    if (models && models.length > 0) {
-      for (const m of models) {
-        const id = m.model || m.id;
-        if (id && !seen.has(id)) {
-          seen.add(id);
-          list.push({
-            id,
-            name: m.displayName || id,
-            provider: m.modelProvider || selectedProvider || "codex-aws",
-            desc: m.description
-          });
-        }
-      }
-    }
-
-    for (const d of DEFAULT_POPULAR_MODELS) {
-      if (!seen.has(d.id)) {
-        seen.add(d.id);
-        list.push(d);
-      }
-    }
-    return list;
-  }, [models, selectedProvider]);
-
-  // Filtered providers & models
   const filteredProviders = useMemo(() => {
     const q = (providerInput || "").toLowerCase().trim();
     if (!q) return SUPPORTED_PROVIDERS;
@@ -325,38 +295,13 @@ export const ModelSelector: FC<ModelSelectorProps> = ({
     return SUPPORTED_PROVIDERS.some((p) => p.id.toLowerCase() === q);
   }, [providerInput]);
 
-  const filteredModels = useMemo(() => {
-    const q = (modelInput || "").toLowerCase().trim();
-    if (!q) return allModelOptions;
-    return allModelOptions.filter(
-      (m) =>
-        m.id.toLowerCase().includes(q) ||
-        m.name.toLowerCase().includes(q) ||
-        (m.provider && m.provider.toLowerCase().includes(q)) ||
-        (m.desc && m.desc.toLowerCase().includes(q)) ||
-        (m.tag && m.tag.toLowerCase().includes(q))
-    );
-  }, [modelInput, allModelOptions]);
-
-  const hasExactModelMatch = useMemo(() => {
-    const q = (modelInput || "").toLowerCase().trim();
-    return allModelOptions.some((m) => m.id.toLowerCase() === q);
-  }, [modelInput, allModelOptions]);
-
   const currentProviderObj = SUPPORTED_PROVIDERS.find((p) => p.id === (chosenProvider || selectedProvider));
-  const currentModelObj = allModelOptions.find((m) => m.id === (chosenModel || effectiveModel));
+
   const handleSelectProviderInline = (provId: string) => {
     setProviderInput(provId);
     setChosenProvider(provId);
     onSelectProvider?.(provId);
     setIsProviderOpen(false);
-  };
-
-  const handleSelectModelInline = (modelId: string) => {
-    setModelInput(modelId);
-    setChosenModel(modelId);
-    onSelectModel?.(modelId);
-    setIsModelOpen(false);
   };
 
   return(

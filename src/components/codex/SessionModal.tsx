@@ -19,7 +19,7 @@ export const SessionModal: FC<SessionModalProps> = ({
   currentEffort,
   currentApprovalPolicy,
   currentApprovalsReviewer = "user",
-  currentProvider = "codex-aws",
+  currentProvider = "shengsuanyun",
   onSelectModel,
   onSelectEffort,
   onSelectApprovalPolicy,
@@ -27,7 +27,7 @@ export const SessionModal: FC<SessionModalProps> = ({
   onStartThread,
   onSwitchProvider
 }) => {
-  const [modelProvider, setModelProvider] = useState<string>(currentProvider || "codex-aws");
+  const [modelProvider, setModelProvider] = useState<string>(currentProvider || "shengsuanyun");
   const [model, setModel] = useState<string>(currentModel || "gpt-5");
   const [reasoningEffort, setReasoningEffort] = useState<string>(currentEffort || "medium");
   const [approvalPolicy, setApprovalPolicy] = useState<AskForApproval>(currentApprovalPolicy || "on-request");
@@ -70,7 +70,7 @@ export const SessionModal: FC<SessionModalProps> = ({
   };
 
   const handleProviderChange = (newProvider: string) => {
-    const cleanProvider = newProvider.trim() || "codex-aws";
+    const cleanProvider = newProvider.trim() || "shengsuanyun";
     setModelProvider(cleanProvider);
     saveToStorage({ modelProvider: cleanProvider });
 

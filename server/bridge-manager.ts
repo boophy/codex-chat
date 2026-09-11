@@ -34,7 +34,7 @@ export function extractProviderFromHome(resolvedPath: string): string {
   if (base.startsWith(".")) {
     return base.slice(1);
   }
-  return base || "codex-aws";
+  return base || "shengsuanyun";
 }
 
 class BridgeManager {
@@ -97,7 +97,7 @@ class BridgeManager {
   }
 
   public async startServer(options: StartServerOptions): Promise<ManagedServerInstance> {
-    const provider = options.modelProvider || (options.codexHome ? extractProviderFromHome(options.codexHome) : "codex-aws");
+    const provider = options.modelProvider || (options.codexHome ? extractProviderFromHome(options.codexHome) : "shengsuanyun");
     const codexHome = resolveCodexHome(options.codexHome, provider);
 
     // 1. Ensure directory exists
@@ -305,7 +305,7 @@ class BridgeManager {
    * Determine whether a codex app-server needs to be started or reused for the requested thread parameters.
    */
   public async ensureServerForThread(params: EnsureThreadServerParams): Promise<ManagedServerInstance> {
-    const provider = (params.modelProvider && params.modelProvider.trim()) || "codex-aws";
+    const provider = (params.modelProvider && params.modelProvider.trim()) || "shengsuanyun";
     const targetHome = resolveCodexHome(params.codexHome, provider);
 
     // Look for an existing running server matching this codexHome or modelProvider
@@ -440,7 +440,7 @@ class BridgeManager {
     }
   }
 
-  public getDefaultConfigToml(provider = "codex-aws"): ConfigToml {
+  public getDefaultConfigToml(provider = "shengsuanyun"): ConfigToml {
     return {
       model: "gpt-5",
       model_provider: provider,

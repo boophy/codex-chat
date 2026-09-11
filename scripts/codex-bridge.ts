@@ -1,4 +1,4 @@
-import { ServerThread, TokenData, AgentIdentityStorage, BedrockApiKeyAuth, BedrockAccessKeysAuth, AuthDotJson, ProviderOption, DEFAULT_POPULAR_MODELS, SUPPORTED_PROVIDERS, AccountInfo } from "../src/types";
+import { ServerThread, TokenData, AgentIdentityStorage, BedrockApiKeyAuth, BedrockAccessKeysAuth, AuthDotJson, ProviderOption, SUPPORTED_PROVIDERS, AccountInfo, DEFAULT_MODELS } from "../src/types";
 import { bridgeManager } from "../server/bridge-manager";
 import { createServer as createViteServer } from "vite";
 import { WebSocketServer, WebSocket } from "ws";
@@ -121,7 +121,7 @@ function initDefaultThreads() {
       updatedAt: Date.now() - 3600000,
       recencyAt: Date.now() - 3600000,
       status: { type: "idle" },
-      model: "gpt-5.4-codex",
+      model: "openai/gpt-6-astra",
       reasoningEffort: "medium",
       ephemeral: false,
       path: "/workspace/projects/codex-client",
@@ -850,7 +850,7 @@ export async function startServer() {
         }
 
         if (method === "model/list") {
-          send({ id, result: { models: DEFAULT_POPULAR_MODELS }, jsonrpc: "2.0" });
+          send({ id, result: { models: DEFAULT_MODELS }, jsonrpc: "2.0" });
           return;
         }
 
@@ -1024,12 +1024,12 @@ export async function startServer() {
           const t: ServerThread = {
             id: newId,
             preview: params?.preview || params?.input?.[0]?.text || "New Thread",
-            modelProvider: params?.modelProvider || activeModelProvider || "codex-aws",
+            modelProvider: params?.modelProvider || activeModelProvider || "shengsuanyun",
             createdAt: Date.now(),
             updatedAt: Date.now(),
             recencyAt: Date.now(),
             status: { type: "idle" },
-            model: params?.model || "gpt-5.4-codex",
+            model: params?.model || "openai/gpt-6-astra",
             reasoningEffort: params?.reasoningEffort || "medium",
             ephemeral: !!params?.ephemeral,
             path: params?.cwd || "/workspace/projects/codex-client",

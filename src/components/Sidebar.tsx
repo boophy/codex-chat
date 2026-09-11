@@ -146,7 +146,7 @@ export const Sidebar: FC<SidebarProps> = ({
                     </div>
 
                     <div className="flex items-center justify-between text-[10px] text-zinc-500 font-mono">
-                      <span className="truncate">{t.modelProvider || "codex-aws"}</span>
+                      <span className="truncate">{t.modelProvider || "shengsuanyun"}</span>
                       <span>{formatTime(t.recencyAt || t.createdAt)}</span>
                     </div>
                   </div>

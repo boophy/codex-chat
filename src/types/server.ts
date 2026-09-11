@@ -90,3 +90,35 @@ export interface ServerThread {
   archived: boolean;
   turns: any[];
 }
+
+
+
+export type BridgeProxyMode = "auto" | "direct" | "mock";
+
+export interface BridgeProxyConfig {
+  mode: BridgeProxyMode;
+  targetUrl: string;
+  autoProxyRunningServer: boolean;
+  activeProvider: string;
+  stripOrigin: boolean;
+  experimentalApi: boolean;
+  resolvedUpstream?: string | null;
+  servers?: ServerRecord[];
+  systemInfo?: {
+    pid: number;
+    uptime: number;
+    memory: { rss: number; heapTotal: number; heapUsed: number };
+  };
+}
+
+export interface ConnectionTestResult {
+  ok: boolean;
+  latencyMs?: number;
+  readyzOk?: boolean;
+  healthzOk?: boolean;
+  readyzCode?: number;
+  healthzCode?: number;
+  readyzText?: string;
+  healthzText?: string;
+  error?: string;
+}

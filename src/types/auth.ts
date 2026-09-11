@@ -1,6 +1,5 @@
-import { AccountInfo as ProtocolAccountInfo } from "./protocol";
-
 export type AuthMode =
+  | "shengSuanYunAccessKeys"
   | "apikey"
   | "chatgpt"
   | "chatgptAuthTokens"
@@ -110,7 +109,6 @@ export interface AccountStatusResult {
   lastRefresh?: string | null;
   [key: string]: any;
 }
-
 
 export interface StartLoginOptions {
   type?: "chatgpt" | string;

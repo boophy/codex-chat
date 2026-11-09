@@ -1,9 +1,8 @@
 import fs from "fs";
 import path from "path";
 import os from "os";
-import { spawn } from "child_process";
-import { WebSocket } from "ws";
 import { bridgeDb } from "./bridge-db";
+import { CodexStdioTransport } from "./codex-stdio";
 import { ServerRecord, ConfigToml, ManagedServerInstance, StartServerOptions, EnsureThreadServerParams } from "../src/types";
 
 export type {
@@ -26,7 +25,7 @@ export function resolveCodexHome(inputPath?: string | null, fallbackProvider?: s
     return path.resolve(os.homedir(), `.${clean}`);
   }
 
-  return path.resolve(os.homedir(), ".codex-aws");
+  return path.resolve(os.homedir(), ".codex-shengsuanyun");
 }
 
 export function extractProviderFromHome(resolvedPath: string): string {
@@ -39,7 +38,6 @@ export function extractProviderFromHome(resolvedPath: string): string {
 
 class BridgeManager {
   private servers = new Map<string, ManagedServerInstance>();
-  private defaultPortCounter = 8080;
 
   constructor() {
     this.restoreFromDb();
@@ -68,7 +66,7 @@ class BridgeManager {
     }
   }
 
-  private findCodexBinary(): string | null {
+  public findCodexBinary(): string | null {
     const bin = ['codex','cdx','codex-app-server','cds']
     const candidates = [
       path.resolve(process.cwd()),
@@ -106,9 +104,8 @@ class BridgeManager {
       bridgeDb.logOperation("CREATE_CODEX_HOME", { codexHome, provider });
     }
 
-    const port = options.listenPort || this.allocatePort(codexHome);
-    const listenAddr = `ws://127.0.0.1:${port}`;
-    const serverId = `server-${provider}-${port}`;
+    const listenAddr = `stdio://${codexHome}`;
+    const serverId = `server-${provider}-stdio`;
 
     // Check if already running on that port or serverId
     const existing = this.servers.get(serverId);
@@ -126,7 +123,7 @@ class BridgeManager {
     const instance: ManagedServerInstance = {
       id: serverId,
       codexHome,
-      listenPort: port,
+      listenPort: -1,
       listenAddr,
       modelProvider: provider,
       process: null,
@@ -146,7 +143,7 @@ class BridgeManager {
       bridgeDb.upsertServer({
         id: serverId,
         codex_home: codexHome,
-        listen_port: port,
+        listen_port: -1,
         listen_addr: listenAddr,
         pid: null,
         status: "running",
@@ -155,52 +152,36 @@ class BridgeManager {
         updated_at: now,
         last_log: msg
       });
-      bridgeDb.logOperation("START_SERVER_SIMULATED", { serverId, codexHome, port, provider });
+      bridgeDb.logOperation("START_SERVER_SIMULATED", { serverId, codexHome, provider });
       return instance;
     }
 
     try {
-      const child = spawn(
-        codexBin,
-        ["app-server", "--listen", listenAddr],
-        {
-          env: {
-            ...process.env,
-            CODEX_HOME: codexHome
-          },
-          stdio: ["pipe", "pipe", "pipe"],
-          detached: false
-        }
-      );
+      const transport = new CodexStdioTransport(codexBin, codexHome);
+      transport.start();
 
-      instance.process = child;
-      instance.pid = child.pid || null;
+      instance.transport = transport;
+      instance.process = transport.process;
+      instance.pid = transport.process?.pid ?? null;
 
-      child.stdout?.on("data", (data) => {
-        const text = data.toString();
-        instance.logs.push(`[stdout] ${text}`);
+      transport.onLog((line) => {
+        instance.logs.push(`[stderr] ${line}`);
         if (instance.logs.length > 200) instance.logs.shift();
       });
 
-      child.stderr?.on("data", (data) => {
-        const text = data.toString();
-        instance.logs.push(`[stderr] ${text}`);
-        if (instance.logs.length > 200) instance.logs.shift();
-      });
-
-      child.on("close", (code) => {
+      transport.onClose((code) => {
         instance.status = "stopped";
         instance.process = null;
         instance.pid = null;
-        const exitMsg = `Process exited with code ${code}`;
+        const exitMsg = `Stdio process exited with code ${code}`;
         instance.logs.push(exitMsg);
         bridgeDb.updateServerStatus(serverId, "stopped", null, exitMsg);
         bridgeDb.logOperation("SERVER_EXITED", { serverId, code });
       });
 
-      child.on("error", (err) => {
+      transport.onError((err) => {
         instance.status = "failed";
-        const errMsg = `Spawn error: ${err.message}`;
+        const errMsg = `Stdio spawn error: ${err.message}`;
         instance.logs.push(errMsg);
         bridgeDb.updateServerStatus(serverId, "failed", null, errMsg);
       });
@@ -210,17 +191,17 @@ class BridgeManager {
       bridgeDb.upsertServer({
         id: serverId,
         codex_home: codexHome,
-        listen_port: port,
+        listen_port: -1,
         listen_addr: listenAddr,
-        pid: child.pid || null,
+        pid: transport.process?.pid ?? null,
         status: "running",
         model_provider: provider,
         created_at: instance.createdAt,
         updated_at: now,
-        last_log: `Spawned ${codexBin} (PID ${child.pid})`
+        last_log: `Spawned ${codexBin} (stdio)`
       });
 
-      bridgeDb.logOperation("START_SERVER", { serverId, codexHome, port, pid: child.pid });
+      bridgeDb.logOperation("START_SERVER", { serverId, codexHome, stdio: true });
       return instance;
     } catch (err: any) {
       instance.status = "failed";
@@ -228,7 +209,7 @@ class BridgeManager {
       bridgeDb.upsertServer({
         id: serverId,
         codex_home: codexHome,
-        listen_port: port,
+        listen_port: -1,
         listen_addr: listenAddr,
         pid: null,
         status: "failed",
@@ -351,7 +332,7 @@ class BridgeManager {
     bridgeDb.logOperation(`ACCOUNT_${action.toUpperCase()}`, { accountType, codexHome, serverId: server.id });
 
     try {
-      const response = await this.callAppServerRpc(server.listenAddr, rpcMethod, payload);
+      const response = await this.callAppServerRpc(server, rpcMethod, payload);
 
       if (action === "start") {
         bridgeDb.saveAuthSession({
@@ -433,7 +414,7 @@ class BridgeManager {
     }
 
     try {
-      const res = await this.callAppServerRpc(targetServer.listenAddr, "config/read", {});
+      const res = await this.callAppServerRpc(targetServer, "config/read", {});
       return (res?.config || res) as ConfigToml;
     } catch {
       return this.getDefaultConfigToml(targetServer.modelProvider);
@@ -473,64 +454,12 @@ class BridgeManager {
     };
   }
 
-  private allocatePort(codexHome: string): number {
-    // Check if an existing server already had a port assigned
-    for (const s of this.servers.values()) {
-      if (s.codexHome === codexHome) {
-        return s.listenPort;
-      }
+  private callAppServerRpc(server: ManagedServerInstance, method: string, params: any): Promise<any> {
+    const transport = server.transport;
+    if (!transport) {
+      return Promise.reject(new Error(`Server ${server.id} has no stdio transport`));
     }
-    const usedPorts = new Set(Array.from(this.servers.values()).map((s) => s.listenPort));
-    let port = this.defaultPortCounter;
-    while (usedPorts.has(port)) {
-      port += 1;
-    }
-    return port;
-  }
-
-  private callAppServerRpc(wsUrl: string, method: string, params: any): Promise<any> {
-    return new Promise((resolve, reject) => {
-      const ws = new WebSocket(wsUrl, { origin: undefined });
-      const timer = setTimeout(() => {
-        try {
-          ws.close();
-        } catch {}
-        reject(new Error(`Timeout calling RPC ${method} on ${wsUrl}`));
-      }, 4000);
-
-      const reqId = "bridge-rpc-" + Math.random().toString(36).slice(2, 9);
-
-      ws.on("open", () => {
-        ws.send(JSON.stringify({
-          jsonrpc: "2.0",
-          id: reqId,
-          method,
-          params
-        }));
-      });
-
-      ws.on("message", (raw) => {
-        try {
-          const msg = JSON.parse(raw.toString());
-          if (msg.id === reqId) {
-            clearTimeout(timer);
-            ws.close();
-            if (msg.error) {
-              reject(new Error(msg.error.message || JSON.stringify(msg.error)));
-            } else {
-              resolve(msg.result);
-            }
-          }
-        } catch (e) {
-          // ignore stream noise
-        }
-      });
-
-      ws.on("error", (err) => {
-        clearTimeout(timer);
-        reject(err);
-      });
-    });
+    return transport.request(method, params, 4000);
   }
 
   private simulateAccountResponse(action: string, accountType: string, codexHome: string): any {

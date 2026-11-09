@@ -1,13 +1,13 @@
 import { SessionModal } from "@/src/components/codex/SessionModal";
-import { Cpu, Coins, Square, Radio } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { Badge } from "@/src/components/ui/badge";
 import { ChatHeaderProps} from "@/src/types";
+import { Cpu, Coins } from "lucide-react";
 import { FC, useState } from "react";
 
 export type { ChatHeaderProps };
 
-export const ChatHeader: React.FC<ChatHeaderProps> = ({
+export const ChatHeader: FC<ChatHeaderProps> = ({
   currentThread,
   models,
   selectedModel,
@@ -15,13 +15,10 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   approvalPolicy,
   tokenUsage,
   isTurnInProgress,
-  showInspector,
   currentProvider = "shengsuanyun",
   onSelectModel,
   onSelectEffort,
   onSelectApprovalPolicy,
-  onInterrupt,
-  onToggleInspector,
   onOpenSettings,
   onOpenProviderModal
 }) => {
@@ -83,24 +80,9 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           }}
         />
 
-        {isTurnInProgress ? (
-          <Button size="sm" variant="destructive" onClick={onInterrupt}
-            className="h-8 gap-1.5 text-xs shadow-sm"
-          >
-            <Square className="w-3.5 h-3.5 fill-current" />
-            <span>Interrupt</span>
-          </Button>
-        ) : null}
-
-        <Button size="sm" variant={showInspector ? "secondary" : "outline"} onClick={onToggleInspector}
-          className="h-8 gap-1.5 text-xs border-zinc-800"
-          title="JSON-RPC Protocol Inspector"
-        >
-          <Radio className="w-3.5 h-3.5 text-indigo-400" />
-          <span className="hidden md:inline">Protocol Inspector</span>
-        </Button>
-
-        <Button size="sm" variant="outline" onClick={onOpenSettings}
+        <Button size="sm" variant="outline" onClick={()=>onOpenSettings(p=>{
+          return p==="settings" ? "chat" : "settings";
+        })}
           className="h-8 text-xs border-zinc-800 text-zinc-300"
         >
           Settings

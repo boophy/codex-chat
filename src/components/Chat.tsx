@@ -1,21 +1,13 @@
 import { Thread, ThreadItem, SkillMetadata, AppInfo, GetAccountRateLimitsResponse, ServerDiagnosticsResponse, ThreadTokenUsage, CommandExecutionRequestApprovalParams, FileChangeRequestApprovalParams, AskForApproval, ReasoningEffort, UserInput, ConnectionStatus, LogFrame, AccountStatusResult } from "@/src/types";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ProtocolInspector } from "@/src/components/ProtocolInspector";
-import { NewThreadPage } from "@/src/components/codex/NewThreadPage";
-import { ModelSelector } from "@/src/components/codex/ModelSelector";
-import { SkillsAppsModal } from "@/src/components/SkillsAppsModal";
 import { ApprovalBanner } from "@/src/components/ApprovalBanner";
 import { Bot, Sparkles, Terminal, Sliders } from "lucide-react";
-import { LoginModal } from "@/src/components/codex/LoginModal";
-import { SettingsModal } from "@/src/components/SettingsModal";
 import { ScrollArea } from "@/src/components/ui/scroll-area";
 import { MessageItem } from "@/src/components/MessageItem";
-import { ChatHeader } from "@/src/components/ChatHeader";
 import { CodexAuthClient } from "@/src/lib/auth-client";
 import { useCodex, resolveProvider } from "@/src/lib/ctx";
 import { ChatInput } from "@/src/components/ChatInput";
 import { wsClient } from "@/src/lib/websocket-client";
-import { Sidebar } from "@/src/components/Sidebar";
 
 export default function App() {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("disconnected");
@@ -28,7 +20,6 @@ export default function App() {
   const [rateLimits, setRateLimits] = useState<GetAccountRateLimitsResponse | null>(null);
   const [diagnostics, setDiagnostics] = useState<ServerDiagnosticsResponse | null>(null);
   const [currentAccount, setCurrentAccount] = useState<AccountStatusResult | null>(null);
-  const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
   const [selectedModel, setSelectedModel] = useState("openai/gpt-6-astra");
   const [selectedEffort, setSelectedEffort] = useState<ReasoningEffort>("medium");
   const [approvalPolicy, setApprovalPolicy] = useState<AskForApproval>("on-request");
@@ -122,11 +113,9 @@ export default function App() {
         // If not logged in on initial load, prompt login window
         if (!accountStatusRes.value.isLoggedIn && !hasInitialLoginPrompted.current) {
           hasInitialLoginPrompted.current = true;
-          setShowLoginModal(true);
         }
       } else if (!hasInitialLoginPrompted.current) {
         hasInitialLoginPrompted.current = true;
-        setShowLoginModal(true);
       }
     } catch (e) {
       console.error(e);
@@ -405,9 +394,6 @@ export default function App() {
             setCurrentProvider(threadProvider);
             const authStatus = await CodexAuthClient.checkAccountStatus(wsClient);
             setCurrentAccount(authStatus);
-            if (!authStatus.isLoggedIn) {
-              setShowLoginModal(true);
-            }
           } catch (e) {
             console.warn("Failed to switch app-server for thread provider:", e);
           }
@@ -435,13 +421,11 @@ export default function App() {
         const authStatus = await CodexAuthClient.checkAccountStatus(wsClient);
         setCurrentAccount(authStatus);
         if (!authStatus.isLoggedIn) {
-          setShowLoginModal(true);
           return;
         }
       } else {
         const authStatus = await CodexAuthClient.checkAccountStatus(wsClient);
         if (!authStatus.isLoggedIn) {
-          setShowLoginModal(true);
           return;
         }
       }
@@ -598,199 +582,75 @@ export default function App() {
   }, [currentThread]);
 
   return (
-    <div className="flex h-screen w-screen bg-zinc-950 text-zinc-100 overflow-hidden font-sans antialiased">
-      <Sidebar
-        threads={threads}
-        activeThreadId={activeThreadId}
-        connectionStatus={connectionStatus}
-        rateLimits={rateLimits}
-        models={models}
-        selectedModel={selectedModel}
-        selectedEffort={selectedEffort}
-        approvalPolicy={approvalPolicy}
-        currentProvider={currentProvider}
-        currentAccount={currentAccount}
-        onSelectThread={selectThread}
-        onNewThread={handleNewThread}
-        onOpenNewThreadPage={() => setCurrentView("new-thread")}
-        onForkThread={handleForkThread}
-        onDeleteThread={handleDeleteThread}
-        onOpenSkillsApps={() => setShowSkillsApps(true)}
-        onReconnect={connectAndInitialize}
-        onOpenLoginModal={() => setShowLoginModal(true)}
-      />
-
-      {currentView === "new-thread" ? (
-        <NewThreadPage
-          models={models}
-          currentModel={selectedModel}
-          currentEffort={selectedEffort}
-          currentApprovalPolicy={approvalPolicy}
-          currentProvider={currentProvider}
-          onBack={() => setCurrentView("chat")}
-          onStartThread={async (params) => {
-            await handleNewThread(params);
-            setCurrentView("chat");
-          }}
-          onOpenProviderModal={handleOpenProviderModal}
-        />
-      ) : (
-        <main className="flex-1 flex flex-col min-w-0 h-full relative bg-zinc-950">
-          <ChatHeader
-            currentThread={currentThread}
-            models={models}
-            selectedModel={selectedModel}
-            selectedEffort={selectedEffort}
-            approvalPolicy={approvalPolicy}
-            tokenUsage={tokenUsage}
-            isTurnInProgress={isTurnInProgress}
-            showInspector={showInspector}
-            currentProvider={currentProvider}
-            onSelectModel={setSelectedModel}
-            onSelectEffort={(eff) => setSelectedEffort(eff as ReasoningEffort)}
-            onSelectApprovalPolicy={setApprovalPolicy}
-            onInterrupt={handleInterrupt}
-            onToggleInspector={() => setShowInspector(!showInspector)}
-            onOpenSettings={() => setShowSettings(true)}
-            onOpenProviderModal= {handleOpenProviderModal}
-          />
-
-          <div className="flex-1 flex min-h-0 relative">
-            <div className="flex-1 flex flex-col min-h-0 bg-linear-to-b from-zinc-950 via-zinc-950 to-zinc-900/30">
-              <ScrollArea className="flex-1 px-2 sm:px-4 py-4">
-                {allItems.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-center p-8 max-w-lg mx-auto min-h-[50vh]">
-                    <div className="w-14 h-14 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-emerald-400 mb-4 shadow-xl">
-                      <Bot className="w-7 h-7" />
-                    </div>
-                    <h3 className="font-semibold text-lg text-zinc-100 mb-1">Codex Interactive Agent</h3>
-                    <p className="text-xs text-zinc-400 leading-relaxed max-w-sm mb-6">
-                      Real-time WebSocket protocol client for Codex App Server. Ask questions, execute shell commands, manage patches, or invoke skills and apps.
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full text-left">
-                      <button type="button"
-                        onClick={() => setCurrentView("new-thread")}
-                        className="p-3 rounded-xl border border-emerald-800/40 bg-emerald-950/20 hover:bg-emerald-950/40 transition-colors text-xs text-zinc-300 cursor-pointer"
-                      >
-                        <div className="font-semibold text-emerald-400 flex items-center gap-1 mb-1">
-                          <Sliders className="w-3.5 h-3.5" /> Thread Config
-                        </div>
-                        <div className="text-[11px] text-zinc-500">Working directory, model & ConfigToml</div>
-                      </button>
-                      <button type="button"
-                        onClick={() => handleSendMessage("Analyze project structure and run diagnostic tests", [], [])}
-                        className="p-3 rounded-xl border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800/80 transition-colors text-xs text-zinc-300 cursor-pointer"
-                      >
-                        <div className="font-semibold text-emerald-400 flex items-center gap-1 mb-1">
-                          <Terminal className="w-3.5 h-3.5" /> Workspace Analysis
-                        </div>
-                        <div className="text-[11px] text-zinc-500">Run shell commands & inspect files</div>
-                      </button>
-                      <button type="button"
-                        onClick={() => handleSendMessage("Refactor code for high performance and strict TypeScript types", [], [])}
-                        className="p-3 rounded-xl border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800/80 transition-colors text-xs text-zinc-300 cursor-pointer"
-                      >
-                        <div className="font-semibold text-indigo-400 flex items-center gap-1 mb-1">
-                          <Sparkles className="w-3.5 h-3.5" /> Deep Code Reasoning
-                        </div>
-                        <div className="text-[11px] text-zinc-500">Chain-of-thought with reasoning deltas</div>
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="max-w-6xl mx-auto pb-4">
-                    {allItems.map((item) => (
-                      <MessageItem key={item.id} item={item} isStreaming={isTurnInProgress}/>
-                    ))}
-                    <div ref={messagesEndRef} />
-                  </div>
-                )}
-              </ScrollArea>
-
-              <ApprovalBanner
-                commandRequest={commandApproval}
-                fileRequest={fileApproval}
-                onDecideCommand={handleDecideCommand}
-                onDecideFile={handleDecideFile}
-              />
-
-              <ChatInput
-                onSendMessage={handleSendMessage}
-                onSteerTurn={handleSteerTurn}
-                onInterrupt={handleInterrupt}
-                isTurnInProgress={isTurnInProgress}
-                skills={skills}
-                apps={apps}
-                disabled={connectionStatus !== "connected"}
-              />
-            </div>
-
-            {showInspector && (
-              <div className="w-96 border-l border-zinc-800 h-full bg-zinc-950/95 flex flex-col shrink-0 animate-in slide-in-from-right-10 duration-200">
-                <ProtocolInspector logs={logs} onClear={() => setLogs([])} onClose={()=>setShowInspector(false)}/>
+    <div className="flex-1 flex min-h-0 relative">
+      <div className="flex-1 flex flex-col min-h-0 bg-linear-to-b from-zinc-950 via-zinc-950 to-zinc-900/30">
+        <ScrollArea className="flex-1 px-2 sm:px-4 py-4">
+          {allItems.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-center p-8 max-w-lg mx-auto min-h-[50vh]">
+              <div className="w-14 h-14 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-emerald-400 mb-4 shadow-xl">
+                <Bot className="w-7 h-7" />
               </div>
-            )}
-          </div>
-        </main>
-      )}
+              <h3 className="font-semibold text-lg text-zinc-100 mb-1">Codex Interactive Agent</h3>
+              <p className="text-xs text-zinc-400 leading-relaxed max-w-sm mb-6">
+                Real-time WebSocket protocol client for Codex App Server. Ask questions, execute shell commands, manage patches, or invoke skills and apps.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full text-left">
+                <button type="button"
+                  onClick={() => setCurrentView("new-thread")}
+                  className="p-3 rounded-xl border border-emerald-800/40 bg-emerald-950/20 hover:bg-emerald-950/40 transition-colors text-xs text-zinc-300 cursor-pointer"
+                >
+                  <div className="font-semibold text-emerald-400 flex items-center gap-1 mb-1">
+                    <Sliders className="w-3.5 h-3.5" /> Thread Config
+                  </div>
+                  <div className="text-[11px] text-zinc-500">Working directory, model & ConfigToml</div>
+                </button>
+                <button type="button"
+                  onClick={() => handleSendMessage("Analyze project structure and run diagnostic tests", [], [])}
+                  className="p-3 rounded-xl border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800/80 transition-colors text-xs text-zinc-300 cursor-pointer"
+                >
+                  <div className="font-semibold text-emerald-400 flex items-center gap-1 mb-1">
+                    <Terminal className="w-3.5 h-3.5" /> Workspace Analysis
+                  </div>
+                  <div className="text-[11px] text-zinc-500">Run shell commands & inspect files</div>
+                </button>
+                <button type="button"
+                  onClick={() => handleSendMessage("Refactor code for high performance and strict TypeScript types", [], [])}
+                  className="p-3 rounded-xl border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800/80 transition-colors text-xs text-zinc-300 cursor-pointer"
+                >
+                  <div className="font-semibold text-indigo-400 flex items-center gap-1 mb-1">
+                    <Sparkles className="w-3.5 h-3.5" /> Deep Code Reasoning
+                  </div>
+                  <div className="text-[11px] text-zinc-500">Chain-of-thought with reasoning deltas</div>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="max-w-6xl mx-auto pb-4">
+              {allItems.map((item) => (
+                <MessageItem key={item.id} item={item} isStreaming={isTurnInProgress}/>
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
+          )}
+        </ScrollArea>
 
-      <SettingsModal
-        open={showSettings}
-        onOpenChange={setShowSettings}
-        currentWsUrl={wsClient.getUrl()}
-        connectionStatus={connectionStatus}
-        diagnostics={diagnostics}
-        onSaveWsUrl={(url) => {
-          wsClient.setUrl(url);
-          connectAndInitialize();
-        }}
-        onFetchDiagnostics={fetchDiagnostics}
-      />
+        <ApprovalBanner
+          commandRequest={commandApproval}
+          fileRequest={fileApproval}
+          onDecideCommand={handleDecideCommand}
+          onDecideFile={handleDecideFile}
+        />
 
-      <SkillsAppsModal
-        open={showSkillsApps}
-        onOpenChange={setShowSkillsApps}
-        skills={skills}
-        apps={apps}
-        onSelectPrompt={(p) => { handleSendMessage(p, [], []);}}
-      />
-
-      <ModelSelector
-        open={showProviderSwitchModal}
-        onOpenChange={setShowProviderSwitchModal}
-        targetProvider={targetSwitchProvider}
-        currentProvider={currentProvider}
-        models={models}
-        selectedModel={selectedModel}
-        onSelectModel={setSelectedModel}
-        currentThread={currentThread}
-        onProviderSwitched={(newProvider) => {
-          setCurrentProvider(newProvider);
-        }}
-        onThreadRestored={(restoredThread) => {
-          setCurrentThread(restoredThread);
-          setActiveThreadId(restoredThread.id);
-        }}
-        onRefreshData={fetchInitialData}
-        onOpenLoginModal={(prov) => {
-          if (prov) setCurrentProvider(prov);
-          setShowLoginModal(true);
-        }}
-      />
-
-      <LoginModal
-        open={showLoginModal}
-        onOpenChange={setShowLoginModal}
-        currentProvider={currentProvider}
-        onProviderChange={async (newProvider) => {
-          setCurrentProvider(newProvider);
-          await fetchInitialData();
-        }}
-        onLoginSuccess={() => {
-          CodexAuthClient.checkAccountStatus(wsClient).then(setCurrentAccount).catch(() => {});
-          fetchInitialData();
-        }}
-      />
+        <ChatInput
+          onSendMessage={handleSendMessage}
+          onSteerTurn={handleSteerTurn}
+          onInterrupt={handleInterrupt}
+          isTurnInProgress={isTurnInProgress}
+          skills={skills}
+          apps={apps}
+          disabled={connectionStatus !== "connected"}
+        />
+      </div>
     </div>
   );
 }

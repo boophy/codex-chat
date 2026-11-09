@@ -137,14 +137,11 @@ export interface ChatHeaderProps {
   approvalPolicy: AskForApproval;
   tokenUsage: ThreadTokenUsage | null;
   isTurnInProgress: boolean;
-  showInspector: boolean;
   currentProvider?: string;
   onSelectModel: (model: string) => void;
   onSelectEffort: (effort: string) => void;
   onSelectApprovalPolicy: (policy: AskForApproval) => void;
-  onInterrupt: () => void;
-  onToggleInspector: () => void;
-  onOpenSettings: () => void;
+  onOpenSettings: Function;
   onOpenServerSettings?: () => void;
   onOpenProviderModal?: (provider?: string) => void;
 }

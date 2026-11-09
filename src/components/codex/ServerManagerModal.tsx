@@ -1,39 +1,13 @@
+import { Server, Play, Square, RefreshCw, Terminal, KeyRound, ExternalLink, Plus, Check, ArrowLeft, Activity, CheckCircle2, XCircle, Copy, ChevronRight, Wifi, Radio, AlertTriangle } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/src/components/ui/dialog";
+import { ServerManagerModalProps, ConnectionTestResult, ServerRecord } from "@/src/types";
 import { FC, useEffect, useState, useRef, useCallback } from "react";
-import {
-  Server,
-  Play,
-  Square,
-  RefreshCw,
-  Terminal,
-  KeyRound,
-  ExternalLink,
-  Plus,
-  Check,
-  ArrowLeft,
-  Activity,
-  CheckCircle2,
-  XCircle,
-  Copy,
-  ChevronRight,
-  Wifi,
-  Radio,
-  AlertTriangle
-} from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter
-} from "@/src/components/ui/dialog";
+import { CodexAuthClient } from "@/src/lib/auth-client";
+import { wsClient } from "@/src/lib/websocket-client";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Badge } from "@/src/components/ui/badge";
-import { wsClient } from "@/src/lib/websocket-client";
-import { CodexAuthClient } from "@/src/lib/auth-client";
 import { cn } from "@/src/lib/utils";
-import { ServerManagerModalProps, ConnectionTestResult, ServerRecord } from "@/src/types";
 
 export type { ServerManagerModalProps };
 
@@ -41,21 +15,15 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
   open,
   onOpenChange,
   onOpenFullPage,
-  currentWsUrl,
-  connectionStatus = "connected",
-  onSaveWsUrl
 }) => {
-  // Navigation State: "list" = instance list, "testing" = test server availability & settings
   const [activeView, setActiveView] = useState<"list" | "testing">("list");
   const [selectedServer, setSelectedServer] = useState<ServerRecord | any | null>(null);
-
-  // Server Instances State
   const [servers, setServers] = useState<ServerRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [serverDetails, setServerDetails] = useState<any | null>(null);
-  const [newCodexHome, setNewCodexHome] = useState("~/.codex-aws");
+  const [newCodexHome, setNewCodexHome] = useState("~/.codex-shengsuanyun");
   const [newPort, setNewPort] = useState("8080");
-  const [newProvider, setNewProvider] = useState("codex-aws");
+  const [newProvider, setNewProvider] = useState("codex-shengsuanyun");
   const [isStarting, setIsStarting] = useState(false);
 
   // Testing View State (from SettingsModal)
@@ -72,7 +40,6 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
   const [lastLoginId, setLastLoginId] = useState<string | null>(null);
   const unsubLoginRef = useRef<(() => void) | null>(null);
 
-  // Fetch all servers from backend
   const fetchServers = useCallback(async () => {
     setLoading(true);
     try {
@@ -88,14 +55,12 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
     }
   }, []);
 
-  // Fetch detailed info & logs for a single server
   const fetchServerDetails = useCallback(async (id: string) => {
     try {
       const res = await fetch(`/api/codex/servers/${encodeURIComponent(id)}`);
       if (res.ok) {
         const data = await res.json();
         setServerDetails(data.server);
-        // If current tested server matches, update its state
         if (selectedServer && selectedServer.id === id) {
           setSelectedServer(data.server);
         }
@@ -105,14 +70,12 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
     }
   }, [selectedServer]);
 
-  // Periodic polling when modal is open
   useEffect(() => {
     if (open) {
       fetchServers();
       const interval = setInterval(fetchServers, 4000);
       return () => clearInterval(interval);
     } else {
-      // Reset view to list when closed
       setActiveView("list");
       setSelectedServer(null);
       setHealthStatus(null);
@@ -120,7 +83,6 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
     }
   }, [open, fetchServers]);
 
-  // Periodic details poll when viewing details/testing
   useEffect(() => {
     if (selectedServer?.id) {
       fetchServerDetails(selectedServer.id);
@@ -129,7 +91,6 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
     }
   }, [selectedServer?.id, fetchServerDetails]);
 
-  // Clean up auth listener
   useEffect(() => {
     return () => {
       if (unsubLoginRef.current) {
@@ -175,7 +136,6 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
     }
   };
 
-  // Restart / Start a specific server from list or testing view
   const handleStartSpecificServer = async (s: ServerRecord | any) => {
     try {
       await fetch("/api/codex/servers/start", {
@@ -368,15 +328,10 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl max-h-[88vh] flex flex-col p-0 gap-0 overflow-hidden bg-zinc-950 border-zinc-800 text-zinc-100">
-        {/* ================= MODAL HEADER ================= */}
         <DialogHeader className="px-6 py-4 border-b border-zinc-800 bg-zinc-900/40 flex flex-row items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             {activeView === "testing" ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={handleBackToList}
+              <Button type="button" size="sm" variant="ghost" onClick={handleBackToList}
                 className="text-xs text-zinc-300 hover:text-white bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 gap-1.5 h-8 px-2.5"
               >
                 <ArrowLeft className="w-3.5 h-3.5 text-indigo-400" />
@@ -413,10 +368,7 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
 
           <div className="flex items-center gap-2">
             {onOpenFullPage && activeView === "list" && (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
+              <Button type="button" size="sm" variant="outline"
                 onClick={() => {
                   onOpenChange(false);
                   onOpenFullPage();
@@ -427,12 +379,8 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
               </Button>
             )}
 
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
+            <Button type="button" size="sm" variant="ghost" disabled={loading}
               onClick={activeView === "testing" && selectedServer ? () => fetchServerDetails(selectedServer.id) : fetchServers}
-              disabled={loading}
               className="text-zinc-400 hover:text-zinc-100 gap-1 text-xs h-8 px-2.5"
             >
               <RefreshCw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
@@ -440,13 +388,9 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
             </Button>
           </div>
         </DialogHeader>
-
-        {/* ================= MODAL BODY ================= */}
         <div className="flex-1 overflow-y-auto p-6 space-y-5 text-xs">
           {activeView === "list" ? (
-            /* ------------------ VIEW A: INSTANCES LIST VIEW ------------------ */
             <>
-              {/* Launch New Instance */}
               <div className="p-3.5 rounded-lg border border-zinc-800 bg-zinc-900/40 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold text-zinc-200 flex items-center gap-1.5">
@@ -459,10 +403,7 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                   <div className="space-y-1">
                     <label className="text-[11px] text-zinc-400">CODEX_HOME (Auto-created if absent)</label>
-                    <input
-                      type="text"
-                      value={newCodexHome}
-                      placeholder="~/.codex-aws"
+                    <input type="text" value={newCodexHome} placeholder="~/.codex-shengsuanyun"
                       onChange={(e) => {
                         setNewCodexHome(e.target.value);
                         if (e.target.value.includes(".")) {
@@ -476,11 +417,7 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
 
                   <div className="space-y-1">
                     <label className="text-[11px] text-zinc-400">Model Provider Identifier</label>
-                    <input
-                      type="text"
-                      value={newProvider}
-                      placeholder="codex-aws"
-                      onChange={(e) => setNewProvider(e.target.value)}
+                    <input type="text" value={newProvider} placeholder="codex-aws" onChange={(e) => setNewProvider(e.target.value)}
                       className="w-full bg-zinc-900 border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-zinc-200 font-mono"
                     />
                   </div>
@@ -488,18 +425,10 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
                   <div className="space-y-1">
                     <label className="text-[11px] text-zinc-400">Listen Port</label>
                     <div className="flex gap-2">
-                      <input
-                        type="number"
-                        value={newPort}
-                        placeholder="8080"
-                        onChange={(e) => setNewPort(e.target.value)}
+                      <input type="number" value={newPort} placeholder="8080" onChange={(e) => setNewPort(e.target.value)}
                         className="w-24 bg-zinc-900 border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-zinc-200 font-mono"
                       />
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={handleStartServer}
-                        disabled={isStarting}
+                      <Button type="button" size="sm" onClick={handleStartServer} disabled={isStarting}
                         className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white gap-1 text-xs"
                       >
                         <Play className="w-3 h-3 fill-current" />
@@ -510,7 +439,6 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
                 </div>
               </div>
 
-              {/* Running / Registered Instances (Clickable Items) */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -535,11 +463,8 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
                     {servers.map((s) => {
                       const isRunning = s.status === "running";
                       return (
-                        <div
-                          key={s.id}
+                        <div key={s.id} role="button" tabIndex={0}
                           onClick={() => handleSelectServerForTesting(s)}
-                          role="button"
-                          tabIndex={0}
                           onKeyDown={(e) => {
                             if (e.key === "Enter" || e.key === " ") {
                               e.preventDefault();
@@ -552,8 +477,7 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
                           )}
                         >
                           <div className="flex items-center gap-3 min-w-0 flex-1 pr-3">
-                            <div
-                              className={cn(
+                            <div className={cn(
                                 "w-2.5 h-2.5 rounded-full shrink-0",
                                 isRunning ? "bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.5)]" : "bg-zinc-600"
                               )}
@@ -582,7 +506,7 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
                               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-zinc-400 font-mono mt-1">
                                 <span className="text-zinc-300">Port: {s.listen_port}</span>
                                 <span>Addr: {s.listen_addr}</span>
-                                <span className="text-zinc-500 truncate max-w-[220px]" title={s.codex_home}>
+                                <span className="text-zinc-500 truncate max-w-55" title={s.codex_home}>
                                   {s.codex_home}
                                 </span>
                               </div>
@@ -590,20 +514,14 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
                           </div>
 
                           <div className="flex items-center gap-2 shrink-0">
-                            {/* Visual Affordance for Testing */}
                             <div className="hidden sm:flex items-center gap-1 text-[11px] text-indigo-300 bg-indigo-950/60 border border-indigo-600/40 px-2.5 py-1 rounded group-hover:bg-indigo-900/60 group-hover:border-indigo-500 transition-all shadow-sm">
                               <Activity className="w-3 h-3 text-indigo-400" />
                               <span>Test & Configure</span>
                               <ChevronRight className="w-3.5 h-3.5 text-indigo-400 group-hover:translate-x-0.5 transition-transform" />
                             </div>
 
-                            {/* Process Controls with stopPropagation */}
                             {isRunning ? (
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="destructive"
-                                className="h-7 px-2.5 gap-1 text-xs"
+                              <Button type="button" size="sm" variant="destructive" className="h-7 px-2.5 gap-1 text-xs"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleStopServer(s.id);
@@ -613,10 +531,7 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
                                 <span>Stop</span>
                               </Button>
                             ) : (
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
+                              <Button type="button" size="sm" variant="outline"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleStartSpecificServer(s);
@@ -635,7 +550,6 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
                 )}
               </div>
 
-              {/* Account Authentication Flow (account/*) */}
               <div className="p-3.5 rounded-lg border border-zinc-800 bg-zinc-900/40 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
@@ -648,10 +562,7 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-[11px] text-zinc-400">Account Type:</span>
                   {["chatgpt", "openai", "aws", "github", "shengsuanyun"].map((type) => (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => setAccountType(type)}
+                    <button key={type} type="button" onClick={() => setAccountType(type)}
                       className={cn(
                         "px-2.5 py-1 rounded text-xs font-mono transition-colors cursor-pointer border",
                         accountType === type
@@ -665,41 +576,25 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
                 </div>
 
                 <div className="flex flex-wrap gap-2 pt-1">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={accountLoading}
+                  <Button type="button" size="sm" variant="outline" disabled={accountLoading}
                     onClick={() => handleAccountAction("start")}
                     className="text-amber-300 hover:text-amber-200 border-amber-800/60 text-xs h-7"
                   >
                     account/login/start
                   </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={accountLoading}
+                  <Button type="button" size="sm" variant="outline" disabled={accountLoading}
                     onClick={() => handleAccountAction("cancel")}
                     className="text-zinc-300 text-xs h-7 border-zinc-700"
                   >
                     account/login/cancel
                   </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={accountLoading}
+                  <Button type="button" size="sm" variant="outline" disabled={accountLoading} 
                     onClick={() => handleAccountAction("logout")}
                     className="text-rose-400 hover:text-rose-300 border-rose-900/60 text-xs h-7"
                   >
                     account/logout
                   </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={accountLoading}
+                  <Button type="button" size="sm" variant="outline" disabled={accountLoading}
                     onClick={() => handleAccountAction("read")}
                     className="text-indigo-300 hover:text-indigo-200 border-indigo-900/60 text-xs h-7"
                   >
@@ -719,8 +614,7 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
                     </div>
                     {accountResult?.result?.authUrl && (
                       <div className="flex items-center gap-2 pt-0.5">
-                        <Button
-                          size="sm"
+                        <Button size="sm"
                           onClick={() => CodexAuthClient.openAuthInBrowser(accountResult.result.authUrl)}
                           className="h-7 text-xs bg-indigo-600 hover:bg-indigo-500 text-white gap-1"
                         >
@@ -738,18 +632,15 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
               </div>
             </>
           ) : (
-            /* ------------------ VIEW B: SERVER TESTING & SETTINGS VIEW (Replaces List) ------------------ */
             selectedServer && (
               <div className="space-y-4">
-                {/* Active Server Info Banner */}
                 <div className="p-3.5 rounded-lg border border-zinc-800 bg-zinc-900/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-semibold text-zinc-100 font-mono">
                         {selectedServer.id}
                       </span>
-                      <Badge
-                        variant={selectedServer.status === "running" ? "success" : "secondary"}
+                      <Badge variant={selectedServer.status === "running" ? "success" : "secondary"}
                         className="text-[10px] py-0"
                       >
                         {selectedServer.status}
@@ -764,16 +655,13 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-zinc-400 font-mono">
                       <span>Port: <strong className="text-zinc-200">{selectedServer.listen_port}</strong></span>
                       <span>Target: {selectedServer.listen_addr}</span>
-                      <span className="text-zinc-500 truncate max-w-[280px]">HOME: {selectedServer.codex_home}</span>
+                      <span className="text-zinc-500 truncate max-w-70">HOME: {selectedServer.codex_home}</span>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
                     {selectedServer.status === "running" ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="destructive"
+                      <Button type="button" size="sm" variant="destructive"
                         onClick={() => handleStopServer(selectedServer.id)}
                         className="h-7 text-xs gap-1"
                       >
@@ -781,9 +669,7 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
                         <span>Stop Process</span>
                       </Button>
                     ) : (
-                      <Button
-                        type="button"
-                        size="sm"
+                      <Button type="button" size="sm"
                         onClick={() => handleStartSpecificServer(selectedServer)}
                         className="h-7 text-xs bg-emerald-600 hover:bg-emerald-500 text-white gap-1"
                       >
@@ -794,15 +680,13 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
                   </div>
                 </div>
 
-                {/* WebSocket URL Testing & Configuration (SettingsModal Feature) */}
                 <div className="p-3.5 rounded-lg border border-zinc-800 bg-zinc-900/30 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Wifi className="w-4 h-4 text-indigo-400" />
                       <span className="font-semibold text-zinc-200">WebSocket Endpoint Configuration</span>
                     </div>
-                    <Badge
-                      variant={connectionStatus === "connected" ? "success" : "secondary"}
+                    <Badge variant={connectionStatus === "connected" ? "success" : "secondary"}
                       className="text-[10px] py-0"
                     >
                       App Status: {connectionStatus}
@@ -815,16 +699,11 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
                       <span className="text-[10px] text-zinc-500">Edit or choose preset below</span>
                     </div>
                     <div className="flex gap-2">
-                      <Input
-                        value={testWsUrl}
-                        onChange={(e) => setTestWsUrl(e.target.value)}
+                      <Input value={testWsUrl} onChange={(e) => setTestWsUrl(e.target.value)}
                         placeholder={`/ws?port=${selectedServer.listen_port} or ws://127.0.0.1:${selectedServer.listen_port}`}
                         className="font-mono text-xs bg-zinc-950 border-zinc-800 h-8"
                       />
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={handleApplyWsUrl}
+                      <Button type="button" size="sm" onClick={handleApplyWsUrl}
                         className="h-8 px-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs gap-1.5 shrink-0"
                       >
                         {appliedSuccess ? (
@@ -842,26 +721,21 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Endpoint Quick Presets */}
                   <div className="flex flex-wrap items-center gap-1.5 pt-1">
                     <span className="text-[10px] text-zinc-500">Quick Presets:</span>
-                    <button
-                      type="button"
+                    <button type="button"
                       onClick={() => setTestWsUrl(`/ws?port=${selectedServer.listen_port}&provider=${selectedServer.model_provider}`)}
                       className="px-2 py-0.5 rounded bg-indigo-950/70 hover:bg-indigo-900 text-indigo-300 font-mono text-[10px] transition-colors border border-indigo-700/60 cursor-pointer"
                     >
                       /ws?port={selectedServer.listen_port} (Proxy - Bypasses 403)
                     </button>
-                    <button
-                      type="button"
+                    <button type="button"
                       onClick={() => setTestWsUrl(`ws://127.0.0.1:${selectedServer.listen_port}`)}
                       className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-mono text-[10px] transition-colors border border-zinc-700 cursor-pointer"
                     >
                       ws://127.0.0.1:{selectedServer.listen_port} (Direct TCP)
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => setTestWsUrl("/ws")}
+                    <button type="button" onClick={() => setTestWsUrl("/ws")}
                       className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-400 font-mono text-[10px] transition-colors border border-zinc-700 cursor-pointer"
                     >
                       /ws (Default Auto-Bridge)
@@ -869,7 +743,6 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
                   </div>
                 </div>
 
-                {/* Health & Availability Probe (/readyz & /healthz Testing) */}
                 <div className="p-3.5 rounded-lg border border-zinc-800 bg-zinc-950/80 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-zinc-200 font-medium">
@@ -877,11 +750,7 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
                       <span>Availability & Health Probe</span>
                     </div>
 
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleCheckHealth}
+                    <Button type="button" variant="outline" size="sm" onClick={handleCheckHealth}
                       disabled={checkingHealth}
                       className="h-7 text-xs px-2.5 gap-1.5 border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-zinc-200"
                     >
@@ -953,7 +822,6 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
                   )}
                 </div>
 
-                {/* 403 Origin Restriction Advisory & CLI Quick Start (SettingsModal Feature) */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="p-3 rounded-lg bg-amber-950/20 border border-amber-800/40 text-[11px] space-y-1.5 text-amber-300/90">
                     <div className="font-semibold text-amber-200 flex items-center gap-1">
@@ -982,7 +850,6 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
                   </div>
                 </div>
 
-                {/* Server Process Output Logs */}
                 <div className="p-3.5 rounded-lg border border-zinc-800 bg-zinc-950 space-y-2">
                   <div className="flex items-center justify-between text-zinc-400">
                     <div className="flex items-center gap-1.5 font-mono text-[11px]">
@@ -990,11 +857,7 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
                       <span>Process Output Logs ({selectedServer.id})</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        onClick={handleCopyLogs}
+                      <Button type="button" size="sm" variant="ghost" onClick={handleCopyLogs}
                         className="h-6 text-[10px] px-2 gap-1 text-zinc-400 hover:text-zinc-200"
                       >
                         {copiedLogs ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
@@ -1023,15 +886,10 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
           )}
         </div>
 
-        {/* ================= MODAL FOOTER ================= */}
         <DialogFooter className="px-6 py-3 border-t border-zinc-800 bg-zinc-900/40 flex flex-row items-center justify-between sm:justify-between shrink-0">
           {activeView === "testing" ? (
             <>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleBackToList}
+              <Button type="button" variant="outline" size="sm" onClick={handleBackToList}
                 className="text-xs border-zinc-700 text-zinc-300 hover:text-white gap-1.5"
               >
                 <ArrowLeft className="w-3.5 h-3.5 text-zinc-400" />
@@ -1039,20 +897,12 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
               </Button>
 
               <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onOpenChange(false)}
+                <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}
                   className="text-xs border-zinc-700 text-zinc-400"
                 >
                   Close
                 </Button>
-                <Button
-                  type="button"
-                  variant="default"
-                  size="sm"
-                  onClick={handleApplyWsUrl}
+                <Button type="button" variant="default" size="sm" onClick={handleApplyWsUrl}
                   className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white gap-1.5"
                 >
                   {appliedSuccess ? (
@@ -1074,11 +924,7 @@ export const ServerManagerModal: FC<ServerManagerModalProps> = ({
               <div className="text-[11px] text-zinc-500">
                 Total Instances: {servers.length} ({servers.filter((s) => s.status === "running").length} active)
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => onOpenChange(false)}
+              <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}
                 className="text-xs border-zinc-700 text-zinc-300"
               >
                 Close

@@ -5,6 +5,7 @@ export interface ManagedServerInstance {
   listenAddr: string;
   modelProvider: string;
   process?: any;
+  transport?: any;
   pid: number | null;
   status: "running" | "stopped" | "failed";
   createdAt: string;

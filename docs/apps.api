@@ -1,0 +1,25 @@
+
+call account/read { "method": "account/read", "id": 0, "params": { "refreshToken": false } }
+
+call account/login/start {"method": "account/login/start","id": 3,"params": {"type": "chatgpt","codexStreamlinedLogin": true,"useHostedLoginSuccessPage": true,"appBrand": "codex"},"type": "chatgpt"}
+
+call account/login/start {"method": "account/login/start","id": 3,"params": {"type": "ShengSuanYun","codexStreamlinedLogin": true,"useHostedLoginSuccessPage": true,"appBrand": "codex"},"type": "ShengSuanYun"}
+
+call thread/start { "method": "thread/start", "id": 0, "params": { "model": "deepseek/deepseek-v4.1-flash" } }
+
+call turn/started { "method": "turn/started", "params": { "turn": { "id": "turn_1" } } }
+
+call account/usage/read {  "method": "account/usage/read",  "params": { "thread_id": "01a1394d-57ca-7271-af4f-046197e34e10" }  }
+
+
+call model/list {}
+
+
+
+
+
+
+
+
+
+

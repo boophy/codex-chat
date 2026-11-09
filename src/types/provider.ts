@@ -1,7 +1,7 @@
 import { AccountInfo } from "./auth";
 import { Model } from "./protocol";
 
-export type ProviderID = "shengsuanyun" | "chatgpt" | "openai" | "shengsuanyun" | "ollama";
+export type ProviderID = "shengsuanyun" | "chatgpt" | "openai" | "aws-bedrock" | "ollama";
 export interface ProviderOption {
   id: ProviderID;
   name: string;
@@ -54,7 +54,7 @@ export const SUPPORTED_PROVIDERS: ProviderOption[] = [
     recommended: false
   },
   {
-    id: "shengsuanyun",
+    id: "aws-bedrock",
     name: "Codex AWS (Bedrock)",
     home: "~/.codex-aws",
     desc: "AWS 云端安全托管运行环境",

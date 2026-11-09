@@ -1,5 +1,6 @@
 import { ServerThread, TokenData, AgentIdentityStorage, BedrockApiKeyAuth, BedrockAccessKeysAuth, AuthDotJson, ProviderOption, SUPPORTED_PROVIDERS, AccountInfo, DEFAULT_MODELS } from "../src/types";
 import { bridgeManager } from "../server/bridge-manager";
+import { CodexStdioTransport } from "../server/codex-stdio";
 import { createServer as createViteServer } from "vite";
 import { WebSocketServer, WebSocket } from "ws";
 import { bridgeDb } from "../server/bridge-db";
@@ -252,34 +253,12 @@ export async function startServer() {
     next();
   });
 
-  const REAL_BACKEND_URL = process.env.CODEX_BACKEND_URL || (process.env.CODEX_REAL === "1" ? "ws://127.0.0.1:8080" : null);
-
   // 1. Health probes & Diagnostics
-  app.get("/readyz", async (req, res) => {
-    if (REAL_BACKEND_URL) {
-      try {
-        const httpTarget = REAL_BACKEND_URL.replace(/^ws/, "http");
-        const resp = await fetch(`${httpTarget}/readyz`, { headers: {} });
-        const text = await resp.text();
-        return res.status(resp.status).send(text);
-      } catch (err: any) {
-        return res.status(502).send(`Cannot reach codex /readyz: ${err.message}`);
-      }
-    }
+  app.get("/readyz", (req, res) => {
     res.status(200).send("OK");
   });
 
-  app.get("/healthz", async (req, res) => {
-    if (REAL_BACKEND_URL) {
-      try {
-        const httpTarget = REAL_BACKEND_URL.replace(/^ws/, "http");
-        const resp = await fetch(`${httpTarget}/healthz`, { headers: {} });
-        const text = await resp.text();
-        return res.status(resp.status).send(text);
-      } catch (err: any) {
-        return res.status(502).send(`Cannot reach codex /healthz: ${err.message}`);
-      }
-    }
+  app.get("/healthz", (req, res) => {
     res.status(200).send("OK");
   });
 
@@ -289,7 +268,7 @@ export async function startServer() {
       activeThreads: threads.size,
       activeProvider: activeModelProvider,
       threadConfigsCount: bridgeDb.listThreadConfigs().length,
-      mode: REAL_BACKEND_URL ? "proxy" : "mock"
+      mode: bridgeManager.findCodexBinary() ? "stdio" : "mock"
     });
   });
 
@@ -636,90 +615,66 @@ export async function startServer() {
     }
   });
 
-  // 9. Unified WebSocket Server (Bridge Proxy + Mock Fallback)
+  // 9. Unified WebSocket Server (Stdio Relay + Mock Fallback)
   wss.on("connection", (ws: WebSocket, req: http.IncomingMessage) => {
     connectedClients.add(ws);
 
     const reqUrl = new URL(req.url || "/ws", "http://localhost:3000");
-    const targetPort = reqUrl.searchParams.get("port");
     const targetProvider = reqUrl.searchParams.get("provider");
+    const backend = reqUrl.searchParams.get("backend");
+    const wantReal =
+      !!targetProvider ||
+      backend === "real" ||
+      backend === "stdio" ||
+      process.env.CODEX_REAL === "1";
 
-    let targetRealUrl: string | null = null;
-    if (targetPort) {
-      targetRealUrl = `ws://127.0.0.1:${targetPort}`;
-    } else if (targetProvider) {
-      const running = bridgeManager.listServers().find((s) => s.model_provider === targetProvider && s.status === "running");
-      if (running) targetRealUrl = running.listen_addr;
-    }
+    const codexBin = bridgeManager.findCodexBinary();
+    const provider = (targetProvider || activeModelProvider || "shengsuanyun").trim();
+    const codexHome = getCodexHomeForProvider(provider);
 
-    if (!targetRealUrl) {
-      targetRealUrl = REAL_BACKEND_URL || (reqUrl.searchParams.get("backend") === "real" ? "ws://127.0.0.1:8080" : null);
-    }
+    if (wantReal && codexBin) {
+      const transport = new CodexStdioTransport(codexBin, codexHome);
+      transport.start();
 
-    if (!targetRealUrl) {
-      const anyRunning = bridgeManager.listServers().find((s) => s.status === "running");
-      if (anyRunning) {
-        targetRealUrl = anyRunning.listen_addr;
-      }
-    }
+      console.log(`[Bridge Stdio] Relaying to codex app-server (binary=${codexBin}, CODEX_HOME=${codexHome})`);
 
-    if (targetRealUrl) {
-      console.log(`[Bridge Proxy] Forwarding client connection to real Codex server at ${targetRealUrl} (Origin stripped)`);
-      const upstreamWs = new WebSocket(targetRealUrl, {
-        origin: undefined
-      });
-
-      const buffer: any[] = [];
-      let upstreamReady = false;
-
-      upstreamWs.on("open", () => {
-        upstreamReady = true;
-        while (buffer.length > 0) {
-          upstreamWs.send(buffer.shift());
-        }
-      });
-
-      ws.on("message", (msg) => {
+      transport.onLine((line) => {
         try {
-          const parsed = JSON.parse(msg.toString());
-          if (parsed.method === "account/login/completed") {
-            broadcastWsNotification("account/login/completed", parsed.params || {});
-          }
-        } catch {}
-
-        if (upstreamReady && upstreamWs.readyState === WebSocket.OPEN) {
-          upstreamWs.send(msg);
-        } else {
-          buffer.push(msg);
-        }
-      });
-
-      upstreamWs.on("message", (msg) => {
-        try {
-          const parsed = JSON.parse(msg.toString());
+          const parsed = JSON.parse(line);
           if (parsed.method === "account/login/completed" || parsed.method === "account/updated") {
             broadcastWsNotification(parsed.method, parsed.params || {});
           }
         } catch {}
 
         if (ws.readyState === WebSocket.OPEN) {
-          ws.send(msg);
+          ws.send(line);
         }
       });
 
-      upstreamWs.on("close", () => {
+      transport.onError((err) => {
+        console.error(`[Bridge Stdio] codex error: ${err.message}`);
+        if (ws.readyState === WebSocket.OPEN) ws.close(1011, `codex error: ${err.message}`);
+      });
+
+      transport.onClose(() => {
         connectedClients.delete(ws);
         if (ws.readyState === WebSocket.OPEN) ws.close();
       });
 
-      upstreamWs.on("error", (err) => {
-        console.error(`[Bridge Proxy] Upstream connection error: ${err.message}`);
-        if (ws.readyState === WebSocket.OPEN) ws.close(1011, `Upstream error: ${err.message}`);
+      ws.on("message", (raw) => {
+        const line = raw.toString();
+        try {
+          const parsed = JSON.parse(line);
+          if (parsed.method === "account/login/completed") {
+            broadcastWsNotification("account/login/completed", parsed.params || {});
+          }
+        } catch {}
+        transport.sendLine(line);
       });
 
       ws.on("close", () => {
         connectedClients.delete(ws);
-        if (upstreamWs.readyState === WebSocket.OPEN) upstreamWs.close();
+        transport.close();
       });
 
       return;

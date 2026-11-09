@@ -38,7 +38,7 @@ export const ServerSettingsPage: React.FC<ServerSettingsPageProps> = ({
   const [loadingServers, setLoadingServers] = useState(false);
   const [selectedServerId, setSelectedServerId] = useState<string | null>(null);
   const [serverDetails, setServerDetails] = useState<any | null>(null);
-  const [newCodexHome, setNewCodexHome] = useState("~/.codex-aws");
+  const [newCodexHome, setNewCodexHome] = useState("~/.codex-shengsuanyun");
   const [newPort, setNewPort] = useState("8080");
   const [newProvider, setNewProvider] = useState(currentProvider || "shengsuanyun");
   const [isStartingServer, setIsStartingServer] = useState(false);
@@ -801,7 +801,7 @@ export const ServerSettingsPage: React.FC<ServerSettingsPageProps> = ({
                   <label className="text-xs text-zinc-400">
                     CODEX_HOME (Directory for config & auth.json)
                   </label>
-                  <input type="text" value={newCodexHome} placeholder="~/.codex-aws"
+                  <input type="text" value={newCodexHome} placeholder="~/.codex-shengsuanyun"
                     onChange={(e) => {
                       setNewCodexHome(e.target.value);
                       if (e.target.value.includes(".")) {
@@ -1184,7 +1184,7 @@ export const ServerSettingsPage: React.FC<ServerSettingsPageProps> = ({
                     # 2. Launch with custom CODEX_HOME
                   </div>
                   <div className="text-zinc-400 mt-0.5">
-                    CODEX_HOME=~/.codex-aws ./codex app-server --listen ws://127.0.0.1:8080
+                    CODEX_HOME=~/.codex-shengsuanyun ./codex app-server --listen ws://127.0.0.1:8080
                   </div>
                 </div>
 
